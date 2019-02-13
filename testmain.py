@@ -48,11 +48,11 @@ X = sample
 #Evaluate sample
 y = np.zeros(shape=[nsample,1])
 for ii in range(0,nsample):
-    y[ii,0],_,_ = branin(X[ii,:])
+    y[ii,0]= branin(X[ii,:])
 
 t = time.time()
 #Run Kriging
-NegLnLike, U, Psi = ordinarykrig(X,y,nvar,standardization=True)
+NegLnLike, U, Psi = kpls(X,y,nvar,standardization=True,principalcomp=1)
 elapsed = time.time() - t
 print("elapsed time: ", elapsed)
 

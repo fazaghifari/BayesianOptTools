@@ -41,8 +41,13 @@ def ordinarykrig (X,Y,ndim,**kwargs):
 
     if num != None:
         print("Multi Objective, train hyperparam, begin.")
-        # Use GA to find optimum value of Theta
-        best_x,MinNegLnLikelihood,_ = uncGA(likelihood.likelihood,lb,ub,opt,disp=True,num=num)
+
+        # Find optimum value of Theta
+        if ndim <= 1:
+            best_x,MinNegLnLikelihood,_ = uncGA(likelihood.likelihood,lb,ub,opt,disp=True,num=num)
+        else:
+            best_x, es = fmin2(likelihood.likelihood, ndim * [0], 3, options={'popsize': 150})
+
         globvar.Theta[num] = best_x
         print("Multi Objective, train hyperparam, end.")
         NegLnLike,U,Psi = likelihood.likelihood(best_x,num)
@@ -50,9 +55,13 @@ def ordinarykrig (X,Y,ndim,**kwargs):
         globvar.Psi[num] = Psi
     else:
         print("Single Objective, train hyperparam, begin.")
-        # Use GA to find optimum value of Theta
-        # best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt,disp=True)
-        best_x,es = fmin2(likelihood.likelihood,ndim*[0],3,options={'popsize':150})
+
+        # Find optimum value of Theta
+        if ndim <= 1:
+            best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt,disp=True)
+        else:
+            best_x,es = fmin2(likelihood.likelihood,ndim*[0],3,options={'popsize':150})
+
         globvar.Theta = best_x
         print("Single Objective, train hyperparam, end.")
         NegLnLike= likelihood.likelihood(best_x)
@@ -60,6 +69,7 @@ def ordinarykrig (X,Y,ndim,**kwargs):
         Psi = globvar.Psi
 
     return (NegLnLike,U,Psi)
+
 
 def kpls (X,Y,ndim,**kwargs):
     globvar.type = "kpls"
@@ -83,6 +93,7 @@ def kpls (X,Y,ndim,**kwargs):
         globvar.X_std, globvar.y_std = standardize(X, Y)
         globvar.X = globvar.X_norm
         globvar.y = globvar.y_norm
+        globvar.standardization = True
 
     # upperbound and lowerbound for Theta
     ub = np.zeros(shape=[n_princomp]);
@@ -93,9 +104,13 @@ def kpls (X,Y,ndim,**kwargs):
 
     if num != None:
         print("Multi Objective, train hyperparam, begin.")
-        # Use GA to find optimum value of Theta
-        best_x,MinNegLnLikelihood,_ = uncGA(likelihood.likelihood,lb,ub,opt,disp=True,num=num)
-        best_x, es = fmin2(likelihood.likelihood, n_princomp * [0], 3)
+
+        # Find optimum value of Theta
+        if n_princomp <= 1:
+            best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt, disp=True, num=num)
+        else:
+            best_x, es = fmin2(likelihood.likelihood, n_princomp * [0], 3, options={'popsize': 150})
+
         globvar.Theta[num] = best_x
         print("Multi Objective, train hyperparam, end.")
         NegLnLike = likelihood.likelihood(best_x,num)
@@ -103,9 +118,13 @@ def kpls (X,Y,ndim,**kwargs):
         Psi = globvar.Psi
     else:
         print("Single Objective, train hyperparam, begin.")
-        # Use GA to find optimum value of Theta
-        best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt,disp=True)
-        # best_x, es = fmin2(likelihood.likelihood, n_princomp * [0], 3)
+
+        # Find optimum value of Theta
+        if n_princomp <= 1:
+            best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt, disp=True)
+        else:
+            best_x, es = fmin2(likelihood.likelihood, n_princomp * [0], 3, options={'popsize': 150})
+
         globvar.Theta = best_x
         print("Single Objective, train hyperparam, end.")
         NegLnLike = likelihood.likelihood(best_x)
