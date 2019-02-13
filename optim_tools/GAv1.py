@@ -31,9 +31,9 @@ def uncGA (fitnessfcn, lb, ub, opt,disp=False,**kwargs):
             #     for j in range (0,nvar):
             #         population[i,j] = lb[j] + (ub[j]-lb[j])*random_sample()
         if num == None:
-            temp, _, _ = fitnessfcn(population[i, 0:nvar])
+            temp= fitnessfcn(population[i, 0:nvar])
         else:
-            temp,_,_ = fitnessfcn(population[i,0:nvar],num)
+            temp= fitnessfcn(population[i,0:nvar],num)
         population[i,nvar] = deepcopy(temp)
 
     #Evolution loop
@@ -93,11 +93,11 @@ def uncGA (fitnessfcn, lb, ub, opt,disp=False,**kwargs):
                 tempopulation[jj, 0:nvar] = matingpool [idx1,:]
                 tempopulation[jj + 1, 0:nvar] = matingpool [idx2,:]
             if num == None:
-                tempopulation[jj, nvar], _, _ = fitnessfcn(tempopulation[jj, lst])
-                tempopulation[jj + 1, nvar], _, _ = fitnessfcn(tempopulation[jj + 1, lst])
+                tempopulation[jj, nvar]= fitnessfcn(tempopulation[jj, lst])
+                tempopulation[jj + 1, nvar]= fitnessfcn(tempopulation[jj + 1, lst])
             else:
-                tempopulation[jj,nvar],_,_ = fitnessfcn(tempopulation[jj,lst],num)
-                tempopulation[jj+1,nvar],_,_ = fitnessfcn(tempopulation[jj+1,lst],num)
+                tempopulation[jj,nvar]= fitnessfcn(tempopulation[jj,lst],num)
+                tempopulation[jj+1,nvar]= fitnessfcn(tempopulation[jj+1,lst],num)
 
         #Combined Population for Elitism
         compopulation = np.vstack((population,tempopulation))
@@ -118,9 +118,9 @@ def uncGA (fitnessfcn, lb, ub, opt,disp=False,**kwargs):
         for kk in range (1,(2*npop)):
             compopulation[kk,0:nvar] = mutation.gaussmut(compopulation[kk, 0:nvar], nvar, pmut, ub, lb)
             if num == None:
-                compopulation[kk, nvar], _, _ = fitnessfcn(compopulation[kk, 0:nvar])
+                compopulation[kk, nvar]= fitnessfcn(compopulation[kk, 0:nvar])
             else:
-                compopulation[kk,nvar],_,_ = fitnessfcn (compopulation[kk,0:nvar],num)
+                compopulation[kk,nvar]= fitnessfcn (compopulation[kk,0:nvar],num)
 
         history[generation-1,0]=generation
         history[generation-1,1]=bestFitness

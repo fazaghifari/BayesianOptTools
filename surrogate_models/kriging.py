@@ -12,6 +12,7 @@ from miscellaneous.surrogate_support import likelihood
 from miscellaneous.surrogate_support.prediction import prediction
 from sklearn.cross_decomposition.pls_ import PLSRegression as pls
 from miscellaneous.sampling.samplingplan import standardize
+from cma import fmin2
 
 def ordinarykrig (X,Y,ndim,**kwargs):
     globvar.type = "kriging"
@@ -36,6 +37,7 @@ def ordinarykrig (X,Y,ndim,**kwargs):
         globvar.X_std, globvar.y_std = standardize(X, Y)
         globvar.X = globvar.X_norm
         globvar.y = globvar.y_norm
+        globvar.standardization = True
 
     if num != None:
         print("Multi Objective, train hyperparam, begin.")
@@ -49,12 +51,13 @@ def ordinarykrig (X,Y,ndim,**kwargs):
     else:
         print("Single Objective, train hyperparam, begin.")
         # Use GA to find optimum value of Theta
-        best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt,disp=True)
+        # best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt,disp=True)
+        best_x,es = fmin2(likelihood.likelihood,ndim*[0],3,options={'popsize':150})
         globvar.Theta = best_x
         print("Single Objective, train hyperparam, end.")
-        NegLnLike, U, Psi = likelihood.likelihood(best_x)
-        globvar.U = U
-        globvar.Psi = Psi
+        NegLnLike= likelihood.likelihood(best_x)
+        U = globvar.U
+        Psi = globvar.Psi
 
     return (NegLnLike,U,Psi)
 
@@ -92,19 +95,21 @@ def kpls (X,Y,ndim,**kwargs):
         print("Multi Objective, train hyperparam, begin.")
         # Use GA to find optimum value of Theta
         best_x,MinNegLnLikelihood,_ = uncGA(likelihood.likelihood,lb,ub,opt,disp=True,num=num)
+        best_x, es = fmin2(likelihood.likelihood, n_princomp * [0], 3)
         globvar.Theta[num] = best_x
         print("Multi Objective, train hyperparam, end.")
-        NegLnLike,U,Psi = likelihood.likelihood(best_x,num)
-        globvar.U[num] = U
-        globvar.Psi[num] = Psi
+        NegLnLike = likelihood.likelihood(best_x,num)
+        U = globvar.U
+        Psi = globvar.Psi
     else:
         print("Single Objective, train hyperparam, begin.")
         # Use GA to find optimum value of Theta
         best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt,disp=True)
+        # best_x, es = fmin2(likelihood.likelihood, n_princomp * [0], 3)
         globvar.Theta = best_x
         print("Single Objective, train hyperparam, end.")
-        NegLnLike, U, Psi = likelihood.likelihood(best_x)
-        globvar.U = U
-        globvar.Psi = Psi
+        NegLnLike = likelihood.likelihood(best_x)
+        U = globvar.U
+        Psi = globvar.Psi
 
-
+    return (NegLnLike, U, Psi)

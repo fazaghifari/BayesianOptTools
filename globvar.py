@@ -17,3 +17,4 @@ X_std = []
 y_norm = []
 y_mean = []
 y_std = []
+standardization = False
