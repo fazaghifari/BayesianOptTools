@@ -31,6 +31,10 @@ import cma.evolution_strategy as cmaes
 def likelihood (x,**num):
     num = num.get('num',None)
     X = globvar.X
+
+    if globvar.multiobj == True:
+        num = globvar.num
+
     if num == None:
         y = globvar.y
     else:
@@ -79,15 +83,24 @@ def likelihood (x,**num):
         temp1  = (mldivide(U,temp11)) #just a temporary variable for debugging
         temp21 = mldivide(np.transpose(U),one) #just a temporary variable for debugging
         temp2  = (mldivide(U,temp21)) #just a temporary variable for debugging
-        mu     = np.dot(np.transpose(one),temp1)/np.dot(np.transpose(one),temp2)
+        tempmu     = np.dot(np.transpose(one),temp1)/np.dot(np.transpose(one),temp2)
+        mu = tempmu[0,0]
         temp31 = mldivide(np.transpose(U),(y-one*mu)) #just a temporary variable for debugging
         temp3  = mldivide(U,temp31) #just a temporary variable for debugging
         SigmaSqr     = (np.dot(np.transpose(y - one * mu),(temp3)))/n
-        NegLnLike    = -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
+        tempNegLnLike    = -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
+        NegLnLike = tempNegLnLike[0,0]
     except:
         NegLnLike = 10000
 
-    return (NegLnLike,U,Psi)
+    if num == None:
+        globvar.U = U
+        globvar.Psi = Psi
+    else:
+        globvar.U[num] = np.array(U)
+        globvar.Psi[num] = np.array(Psi)
+    # return (NegLnLike,U,Psi)
+    return NegLnLike
     print ("Psi = ",Psi)
 
 

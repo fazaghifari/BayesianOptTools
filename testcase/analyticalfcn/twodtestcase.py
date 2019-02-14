@@ -8,7 +8,7 @@ def styb(x):
         new = xi**4 - 16*xi**2 + 5*xi
         sum = sum + new
     y = sum/2
-    return (y,0,0)
+    return y
 
 def branin (x):
     a = 5.1/(4 * (np.pi)**2 )
@@ -16,4 +16,4 @@ def branin (x):
     c = (1-(1/(8 * np.pi)))
 
     f = (x[1] - a*x[1] + b*x[0] - 6)**2 + 10*(c* np.cos(x[0]) +1)
-    return (f,0,0)
+    return f

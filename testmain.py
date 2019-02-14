@@ -7,6 +7,7 @@ from miscellaneous.sampling.samplingplan import sampling,realval,standardize
 from testcase.analyticalfcn.twodtestcase import branin
 from miscellaneous.surrogate_support.EIpred import eipred
 from optim_tools.GAv1 import uncGA
+import time
 
 # #Testcase Umich
 # xt = np.array([[0., 1., 2., 3., 4.]])
@@ -33,7 +34,7 @@ from optim_tools.GAv1 import uncGA
 # plt.show()
 
 # Custom Testcase
-nsample = 12
+nsample = 20
 nvar = 2
 ub = np.array([10,15])
 lb = np.array([-5,0])
@@ -47,10 +48,13 @@ X = sample
 #Evaluate sample
 y = np.zeros(shape=[nsample,1])
 for ii in range(0,nsample):
-    y[ii,0],_,_ = branin(X[ii,:])
+    y[ii,0]= branin(X[ii,:])
 
+t = time.time()
 #Run Kriging
-NegLnLike, U, Psi = kpls(X,y,nvar,standardization=True)
+NegLnLike, U, Psi = kpls(X,y,nvar,standardization=True,principalcomp=1)
+elapsed = time.time() - t
+print("elapsed time: ", elapsed)
 
 #Perform kriging with EI
 # globvar.Option = 'NegLogExpImp'
@@ -76,8 +80,8 @@ Xeval = sampleeval
 yeval = np.zeros(shape=[neval,1])
 yact = np.zeros(shape=[neval,1])
 for ii in range(0,neval):
-    yeval[ii,0],_,_ = prediction(Xeval[ii,:])
-    yact[ii,0],_,_ = branin(Xeval[ii,:])
+    yeval[ii,0]= prediction(Xeval[ii,:])
+    yact[ii,0]= branin(Xeval[ii,:])
 
 hasil = np.hstack((yeval,yact))
 

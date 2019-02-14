@@ -49,6 +49,9 @@ def prediction (x,**kwargs):
         theta = 10**globvar.Theta[num]
         U = globvar.U[num]
 
+    if globvar.standardization == True:
+        x = (x-globvar.X_mean)/globvar.X_std
+
     #Calculate number of sample points
     n = np.ma.size(X, axis=0)
 
@@ -66,10 +69,21 @@ def prediction (x,**kwargs):
     psi = np.ones((n,1),float)
 
     #fill psi vector
-    for i in range (0,n):
-        psi[i]= np.exp(-1*np.sum(theta*abs(X[i,:]-x)**p))
+    if globvar.type == "kriging":
+        for i in range (0,n):
+            psi[i]= np.exp(-1*np.sum(theta*abs(X[i,:]-x)**p))
+
+    elif globvar.type == "kpls":
+        for i in range(0, n):
+            psi[i] = np.exp(-1 * np.sum(theta * np.dot(((X[i, :] - x) ** p), (globvar.plscoeff ** p))))
 
     #calculate prediction
     f = mu + np.dot(np.transpose(psi), mldivide(U,mldivide(np.transpose(U),(y - one*mu))))
+    if num == None:
+        if globvar.standardization == True:
+            f = (globvar.y_mean + globvar.y_std*f).ravel()
+    else:
+        if globvar.standardization == True:
+            f = (globvar.y_mean[num] + globvar.y_std[num]*f).ravel()
 
-    return (f,0,0)
+    return f
