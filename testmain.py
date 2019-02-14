@@ -34,7 +34,7 @@ import time
 # plt.show()
 
 # Custom Testcase
-nsample = 12
+nsample = 20
 nvar = 2
 ub = np.array([10,15])
 lb = np.array([-5,0])

@@ -7,17 +7,18 @@ This module contains any forms of kriging
 """
 import numpy as np
 import globvar
+from copy import deepcopy
 from optim_tools.GAv1 import uncGA
 from miscellaneous.surrogate_support import likelihood
 from miscellaneous.surrogate_support.prediction import prediction
 from sklearn.cross_decomposition.pls_ import PLSRegression as pls
+from scipy.optimize import minimize_scalar
 from miscellaneous.sampling.samplingplan import standardize
 from cma import fmin2
 
 def ordinarykrig (X,Y,ndim,**kwargs):
     globvar.type = "kriging"
     globvar.X = X
-    globvar.y = Y
 
     num = kwargs.get('num',None) #Means objective function number XX
     ubvalue = kwargs.get('ub', 3)
@@ -31,34 +32,58 @@ def ordinarykrig (X,Y,ndim,**kwargs):
     lb[:] = lbvalue
     opt = "min"
 
-    # Standardize X and y
-    if standardization == True:
-        globvar.X_norm, globvar.y_norm, globvar.X_mean, globvar.y_mean, \
-        globvar.X_std, globvar.y_std = standardize(X, Y)
-        globvar.X = globvar.X_norm
-        globvar.y = globvar.y_norm
-        globvar.standardization = True
-
     if num != None:
+
+        globvar.multiobj = True
+        globvar.num = num
+        globvar.y = [0]*(num+1)
+        globvar.Theta = [0] * (num + 1)
+        globvar.U = [0] * (num + 1)
+        globvar.Psi = [0] * (num + 1)
+        globvar.y_mean = [0] * (num + 1)
+        globvar.y_std = [0] * (num + 1)
+        globvar.y[num]= Y
+
+        # Standardize X and y
+        if standardization == True:
+            globvar.X_norm, globvar.y_norm, globvar.X_mean, globvar.y_mean[num], \
+            globvar.X_std, globvar.y_std[num] = standardize(X, Y)
+            globvar.X = globvar.X_norm
+            globvar.y[num] = globvar.y_norm
+            globvar.standardization = True
+
         print("Multi Objective, train hyperparam, begin.")
 
         # Find optimum value of Theta
         if ndim <= 1:
-            best_x,MinNegLnLikelihood,_ = uncGA(likelihood.likelihood,lb,ub,opt,disp=True,num=num)
+            res = minimize_scalar(likelihood.likelihood, bounds=(lbvalue, ubvalue), method='golden')
+            best_x = np.array([res.x])
         else:
             best_x, es = fmin2(likelihood.likelihood, ndim * [0], 3, options={'popsize': 150})
 
         globvar.Theta[num] = best_x
         print("Multi Objective, train hyperparam, end.")
-        NegLnLike,U,Psi = likelihood.likelihood(best_x,num)
-        globvar.U[num] = U
-        globvar.Psi[num] = Psi
+        NegLnLike= likelihood.likelihood(best_x,num=num)
+        U = globvar.U[num]
+        Psi = globvar.Psi[num]
+
     else:
+        globvar.y = Y
+
+        # Standardize X and y
+        if standardization == True:
+            globvar.X_norm, globvar.y_norm, globvar.X_mean, globvar.y_mean, \
+            globvar.X_std, globvar.y_std = standardize(X, Y)
+            globvar.X = globvar.X_norm
+            globvar.y = globvar.y_norm
+            globvar.standardization = True
+
         print("Single Objective, train hyperparam, begin.")
 
         # Find optimum value of Theta
         if ndim <= 1:
-            best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt,disp=True)
+            res = minimize_scalar(likelihood.likelihood, bounds=(lbvalue, ubvalue), method='golden')
+            best_x = np.array([res.x])
         else:
             best_x,es = fmin2(likelihood.likelihood,ndim*[0],3,options={'popsize':150})
 
@@ -87,14 +112,6 @@ def kpls (X,Y,ndim,**kwargs):
     coeff_pls = _pls.fit(X.copy(), Y.copy()).x_rotations_
     globvar.plscoeff = coeff_pls
 
-    # Standardize X and y
-    if standardization == True:
-        globvar.X_norm, globvar.y_norm, globvar.X_mean, globvar.y_mean, \
-        globvar.X_std, globvar.y_std = standardize(X, Y)
-        globvar.X = globvar.X_norm
-        globvar.y = globvar.y_norm
-        globvar.standardization = True
-
     # upperbound and lowerbound for Theta
     ub = np.zeros(shape=[n_princomp]);
     ub[:] = ubvalue
@@ -103,25 +120,59 @@ def kpls (X,Y,ndim,**kwargs):
     opt = "min"
 
     if num != None:
+
+        globvar.multiobj = True
+        globvar.num = num
+        globvar.y = [0] * (num + 1)
+        globvar.Theta = [0] * (num + 1)
+        globvar.U = [0] * (num + 1)
+        globvar.Psi = [0] * (num + 1)
+        globvar.y_mean = [0] * (num + 1)
+        globvar.y_std = [0] * (num + 1)
+        globvar.y[num] = Y
+
+        # Standardize X and y
+        if standardization == True:
+            globvar.X_norm, globvar.y_norm, globvar.X_mean, globvar.y_mean[num], \
+            globvar.X_std, globvar.y_std[num] = standardize(X, Y)
+            globvar.X = globvar.X_norm
+            globvar.y[num] = globvar.y_norm
+            globvar.standardization = True
+
         print("Multi Objective, train hyperparam, begin.")
 
         # Find optimum value of Theta
         if n_princomp <= 1:
-            best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt, disp=True, num=num)
+            res = minimize_scalar(likelihood.likelihood, bounds=(lbvalue, ubvalue), method='golden')
+            best_x = np.array([res.x])
+            # best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt, disp=True, num=num)
         else:
             best_x, es = fmin2(likelihood.likelihood, n_princomp * [0], 3, options={'popsize': 150})
 
         globvar.Theta[num] = best_x
         print("Multi Objective, train hyperparam, end.")
-        NegLnLike = likelihood.likelihood(best_x,num)
-        U = globvar.U
-        Psi = globvar.Psi
+        NegLnLike = likelihood.likelihood(best_x,num=num)
+        U = globvar.U[num]
+        Psi = globvar.Psi[num]
+
     else:
+        globvar.y = Y
+
+        # Standardize X and y
+        if standardization == True:
+            globvar.X_norm, globvar.y_norm, globvar.X_mean, globvar.y_mean, \
+            globvar.X_std, globvar.y_std = standardize(X, Y)
+            globvar.X = globvar.X_norm
+            globvar.y = globvar.y_norm
+            globvar.standardization = True
+
         print("Single Objective, train hyperparam, begin.")
 
         # Find optimum value of Theta
         if n_princomp <= 1:
-            best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt, disp=True)
+            res = minimize_scalar(likelihood.likelihood, bounds=(lbvalue, ubvalue), method='golden')
+            best_x = np.array([res.x])
+            # best_x, MinNegLnLikelihood, _ = uncGA(likelihood.likelihood, lb, ub, opt, disp=True)
         else:
             best_x, es = fmin2(likelihood.likelihood, n_princomp * [0], 3, options={'popsize': 150})
 

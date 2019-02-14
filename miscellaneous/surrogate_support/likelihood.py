@@ -31,6 +31,10 @@ import cma.evolution_strategy as cmaes
 def likelihood (x,**num):
     num = num.get('num',None)
     X = globvar.X
+
+    if globvar.multiobj == True:
+        num = globvar.num
+
     if num == None:
         y = globvar.y
     else:
@@ -89,8 +93,12 @@ def likelihood (x,**num):
     except:
         NegLnLike = 10000
 
-    globvar.U = U
-    globvar.Psi = Psi
+    if num == None:
+        globvar.U = U
+        globvar.Psi = Psi
+    else:
+        globvar.U[num] = np.array(U)
+        globvar.Psi[num] = np.array(Psi)
     # return (NegLnLike,U,Psi)
     return NegLnLike
     print ("Psi = ",Psi)

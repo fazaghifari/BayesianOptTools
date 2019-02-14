@@ -79,8 +79,11 @@ def prediction (x,**kwargs):
 
     #calculate prediction
     f = mu + np.dot(np.transpose(psi), mldivide(U,mldivide(np.transpose(U),(y - one*mu))))
-
-    if globvar.standardization == True:
-        f = (globvar.y_mean + globvar.y_std*f).ravel()
+    if num == None:
+        if globvar.standardization == True:
+            f = (globvar.y_mean + globvar.y_std*f).ravel()
+    else:
+        if globvar.standardization == True:
+            f = (globvar.y_mean[num] + globvar.y_std[num]*f).ravel()
 
     return f
