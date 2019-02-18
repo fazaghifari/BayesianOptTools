@@ -37,8 +37,11 @@ def likelihood (x,**num):
 
     if num == None:
         y = globvar.y
+        plscoeff = globvar.plscoeff
     else:
         y = globvar.y[num]
+        plscoeff = globvar.plscoeff[num]
+
     theta = 10**x
     p = 2 #from reference
     n = np.ma.size(X,axis=0)
@@ -58,7 +61,7 @@ def likelihood (x,**num):
     elif globvar.type == "kpls":
         for i in range (0,n):
             for j in range (i+1,n):
-                Psi[i,j] = np.exp(-1*np.sum(theta* np.dot( ((X[i,:] - X[j,:])**p) , (globvar.plscoeff**p) )))
+                Psi[i,j] = np.exp(-1*np.sum(theta* np.dot( ((X[i,:] - X[j,:])**p) , (plscoeff**p) )))
         pass
 
     #Add upper and lower halves and diagonal of ones plus

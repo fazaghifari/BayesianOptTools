@@ -21,8 +21,8 @@ def ordinarykrig (X,Y,ndim,**kwargs):
     globvar.X = X
 
     num = kwargs.get('num',None) #Means objective function number XX
-    ubvalue = kwargs.get('ub', 3)
-    lbvalue = kwargs.get('ub', -2)
+    ubvalue = kwargs.get('ub', 2)
+    lbvalue = kwargs.get('ub', -3)
     standardization = kwargs.get('standardization', False)
 
     # upperbound and lowerbound for Theta
@@ -107,11 +107,6 @@ def kpls (X,Y,ndim,**kwargs):
     n_princomp = kwargs.get('principalcomp', 1)
     standardization = kwargs.get('standardization', False)
 
-    # Calculate PLS coeff
-    _pls = pls(n_princomp)
-    coeff_pls = _pls.fit(X.copy(), Y.copy()).x_rotations_
-    globvar.plscoeff = coeff_pls
-
     # upperbound and lowerbound for Theta
     ub = np.zeros(shape=[n_princomp]);
     ub[:] = ubvalue
@@ -129,6 +124,7 @@ def kpls (X,Y,ndim,**kwargs):
         globvar.Psi = [0] * (num + 1)
         globvar.y_mean = [0] * (num + 1)
         globvar.y_std = [0] * (num + 1)
+        globvar.plscoeff = [0] * (num + 1)
         globvar.y[num] = Y
 
         # Standardize X and y
@@ -138,6 +134,11 @@ def kpls (X,Y,ndim,**kwargs):
             globvar.X = globvar.X_norm
             globvar.y[num] = globvar.y_norm
             globvar.standardization = True
+
+        # Calculate PLS coeff
+        _pls = pls(n_princomp)
+        coeff_pls = _pls.fit(X.copy(), Y.copy()).x_rotations_
+        globvar.plscoeff[num]= coeff_pls
 
         print("Multi Objective, train hyperparam, begin.")
 
@@ -165,6 +166,13 @@ def kpls (X,Y,ndim,**kwargs):
             globvar.X = globvar.X_norm
             globvar.y = globvar.y_norm
             globvar.standardization = True
+            X = globvar.X
+            Y = globvar.y
+
+        # Calculate PLS coeff
+        _pls = pls(n_princomp)
+        coeff_pls = _pls.fit(X.copy(), Y.copy()).x_rotations_
+        globvar.plscoeff = coeff_pls
 
         print("Single Objective, train hyperparam, begin.")
 

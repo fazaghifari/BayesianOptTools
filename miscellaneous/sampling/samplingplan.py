@@ -8,14 +8,32 @@ import numpy as np
 from miscellaneous.sampling.haltonsampling import halton
 from miscellaneous.sampling.sobol_seq import i4_sobol_generate
 
-def sampling(option,nvar,nsamp):
-    if option == "halton":
-        result = halton(nvar,nsamp)
-    elif option == "sobol":
-        result = i4_sobol_generate(nvar,nsamp)
+def sampling(option,nvar,nsamp,**kwargs):
+    ret = kwargs.get('result', "normalized")
+    ub = kwargs.get('upbound', np.array([None]))
+    lb = kwargs.get('lobound', np.array([None]))
+
+    if option.lower() == "halton":
+        samplenorm = halton(nvar,nsamp)
+    elif option.lower() == "sobol":
+        samplenorm = i4_sobol_generate(nvar,nsamp)
     else:
         raise NameError("sampling plan unavailable!")
-    return result
+
+    if ret.lower() == "real" and lb.any() != None and ub.any() != None:
+        checker = ub - lb;
+        for numbers in checker:
+            if numbers < 0:
+                raise ValueError("Upper bound must bigger than lower bound!")
+        sample = realval(lb, ub, samplenorm)
+    elif ret.lower() == "real" and (lb.any == None or ub.any == None):
+        raise ValueError("lb and ub must have value")
+
+    if ret.lower() == "real":
+        return samplenorm,sample
+    else:
+        print("real value returned as zero matrix")
+        return samplenorm,np.zeros(np.shape(samplenorm))
 
 def realval(lb,ub,samp):
     if len(ub) != len(lb):

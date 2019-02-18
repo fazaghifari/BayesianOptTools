@@ -40,14 +40,20 @@ def prediction (x,**kwargs):
     num = kwargs.get('num',None) # Num means Objective Function number XX
     X = globvar.X
     p = 2  # from reference
+
+    if globvar.multiobj == True:
+        num = globvar.num
+
     if num == None:
         y = globvar.y
         theta = 10 ** globvar.Theta
         U = globvar.U
+        plscoeff = globvar.plscoeff
     else:
         y = globvar.y[num]
         theta = 10**globvar.Theta[num]
         U = globvar.U[num]
+        plscoeff = globvar.plscoeff[num]
 
     if globvar.standardization == True:
         x = (x-globvar.X_mean)/globvar.X_std
@@ -75,7 +81,7 @@ def prediction (x,**kwargs):
 
     elif globvar.type == "kpls":
         for i in range(0, n):
-            psi[i] = np.exp(-1 * np.sum(theta * np.dot(((X[i, :] - x) ** p), (globvar.plscoeff ** p))))
+            psi[i] = np.exp(-1 * np.sum(theta * np.dot(((X[i, :] - x) ** p), (plscoeff ** p))))
 
     #calculate prediction
     f = mu + np.dot(np.transpose(psi), mldivide(U,mldivide(np.transpose(U),(y - one*mu))))

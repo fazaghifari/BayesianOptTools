@@ -4,7 +4,7 @@ import globvar
 from surrogate_models.kriging import ordinarykrig,kpls
 from miscellaneous.surrogate_support.prediction import prediction
 from miscellaneous.sampling.samplingplan import sampling,realval,standardize
-from testcase.analyticalfcn.twodtestcase import branin
+from testcase.analyticalfcn.twodtestcase import evaluate,branin
 from miscellaneous.surrogate_support.EIpred import eipred
 from optim_tools.GAv1 import uncGA
 import time
@@ -33,26 +33,23 @@ import time
 # plt.legend(['Training data', 'Prediction'])
 # plt.show()
 
-# Custom Testcase
+# Sampling
 nsample = 20
 nvar = 2
 ub = np.array([10,15])
 lb = np.array([-5,0])
 nup = 3
-
 sampoption = "halton"
-samplenorm = sampling(sampoption,nvar,nsample)
-sample = realval(lb,ub, samplenorm)
+
+samplenorm,sample = sampling(sampoption,nvar,nsample,result="real",upbound=ub,lobound=lb)
 X = sample
 
 #Evaluate sample
-y = np.zeros(shape=[nsample,1])
-for ii in range(0,nsample):
-    y[ii,0]= branin(X[ii,:])
+y = evaluate(X,"branin")
 
-t = time.time()
 #Run Kriging
-NegLnLike, U, Psi = kpls(X,y,nvar,standardization=True,principalcomp=1)
+t = time.time()
+NegLnLike, U, Psi = kpls(X,y,nvar,standardization=True,principalcomp=1,num=0)
 elapsed = time.time() - t
 print("elapsed time: ", elapsed)
 
@@ -72,8 +69,7 @@ print("elapsed time: ", elapsed)
 
 #Test Kriging Output
 neval = 10000
-samplenormout = sampling(sampoption,nvar,neval)
-sampleeval = realval(lb,ub, samplenormout)
+samplenormout,sampleeval = sampling(sampoption,nvar,neval,result="real",upbound=ub,lobound=lb)
 Xeval = sampleeval
 
 #Evaluate output

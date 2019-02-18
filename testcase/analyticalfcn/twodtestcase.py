@@ -1,5 +1,19 @@
 import numpy as np
 
+def evaluate(X,type):
+
+    nsample = np.size(X, 0)
+    y = np.zeros(shape=[nsample, 1])
+    if type.lower() == "branin":
+        for ii in range(0, nsample):
+            y[ii, 0] = branin(X[ii, :])
+    elif type.lower() == "styblinski":
+        for ii in range(0, nsample):
+            y[ii, 0] = styb(X[ii, :])
+    else:
+        raise NameError("Test case unavailable!")
+    return y
+
 def styb(x):
     d = len(x)
     sum = 0
