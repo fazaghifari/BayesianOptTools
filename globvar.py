@@ -1,22 +1,10 @@
 import numpy as np
 X = []
 y = []
-y1 = []
-y2 = []
 num = 0
 Theta = []
 U = []
 Psi = []
 sigmasqr = []
-Option = "zero"
-ConstraintLimit = []
 plscoeff = []
-type = "Kriging"
-X_norm = []
-X_mean = []
-X_std = []
-y_norm = []
-y_mean = []
-y_std = []
-standardization = False
-multiobj = False
+KrigInfo = dict()

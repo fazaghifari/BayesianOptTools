@@ -5,7 +5,9 @@ Subroutines:
 
 """
 import numpy as np
+import globvar
 from miscellaneous.sampling.haltonsampling import halton
+from miscellaneous.sampling.rlh import rlh
 from miscellaneous.sampling.sobol_seq import i4_sobol_generate
 
 def sampling(option,nvar,nsamp,**kwargs):
@@ -17,6 +19,8 @@ def sampling(option,nvar,nsamp,**kwargs):
         samplenorm = halton(nvar,nsamp)
     elif option.lower() == "sobol":
         samplenorm = i4_sobol_generate(nvar,nsamp)
+    elif option.lower() == "rlh":
+        samplenorm = rlh(nvar, nsamp)
     else:
         raise NameError("sampling plan unavailable!")
 
@@ -48,15 +52,50 @@ def realval(lb,ub,samp):
             realsamp[j, i] = (samp[j, i] * (ub[i] - lb[i])) + lb[i]
     return realsamp
 
-def standardize(X,y):
-    X_mean = np.mean(X, axis=0)
-    X_std = X.std(axis=0, ddof=1)
-    y_mean = np.mean(y, axis=0)
-    y_std = y.std(axis=0, ddof=1)
-    X_std[X_std == 0.] = 1.
-    y_std[y_std == 0.] = 1.
+def standardize(X,y,**kwargs):
+    type = kwargs.get('type', "default")
+    norm_y = kwargs.get('normy',False)
+    ranges = kwargs.get('range', np.array([None]))
 
-    X = (X - X_mean) / X_std
-    y = (y - y_mean) / y_std
-    return X, y, X_mean, y_mean, X_std, y_std
-    pass
+    if type.lower()=='default':
+        X_norm = np.empty(np.shape(X))
+        y_norm = np.empty(np.shape(y))
+        if ranges.any() == None:
+            raise ValueError("Default normalization requires range value!")
+        if norm_y == True:
+            # Normalize to [0,1]
+            for i in range(0, np.size(X, 1)):
+                X_norm[:, i] = (X[:, i] - ranges[0, i]) / (ranges[1, i] - ranges[0, i])
+            for i in range(0, np.size(y, 1)):
+                y_norm[:, i] = (y[:, i] - ranges[0, i]) / (ranges[1, i] - ranges[0, i])
+            # Normalize to [-1,1]
+            X_norm = (X_norm - 0.5) * 2
+            y_norm = (y_norm - 0.5) * 2
+            return X_norm,y_norm
+        else:
+            #Normalize to [0,1]
+            for i in range(0,np.size(X,1)):
+                X_norm[:,i] = (X[:,i]-ranges[0,i])/(ranges[1,i]-ranges[0,i])
+            #Normalize to [-1,1]
+            X_norm = (X_norm-0.5)*2
+            return X_norm
+
+    elif type.lower() == 'std':
+        if norm_y == True:
+            X_mean = np.mean(X, axis=0)
+            X_std = X.std(axis=0, ddof=1)
+            y_mean = np.mean(y, axis=0)
+            y_std = y.std(axis=0, ddof=1)
+            X_std[X_std == 0.] = 1.
+            y_std[y_std == 0.] = 1.
+
+            X_norm = (X - X_mean) / X_std
+            y_norm = (y - y_mean) / y_std
+            return X_norm, y_norm, X_mean, y_mean, X_std, y_std
+        else:
+            X_mean = np.mean(X, axis=0)
+            X_std = X.std(axis=0, ddof=1)
+            X_std[X_std == 0.] = 1.
+
+            X_norm = (X - X_mean) / X_std
+            return X_norm, X_mean, X_std

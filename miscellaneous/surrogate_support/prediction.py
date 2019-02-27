@@ -30,66 +30,98 @@
 # Lesser General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import globvar
 import numpy as np
 from numpy.linalg import solve as mldivide
+from miscellaneous.surrogate_support.kernel import calckernel
+from miscellaneous.sampling.samplingplan import standardize
+from miscellaneous.surrogate_support.trendfunction import compute_regression_mat
 
-def prediction (x,**kwargs):
+def prediction (x,KrigInfo,**kwargs):
     # extract variables from data structure
     # slower, but makes code easier to follow
     num = kwargs.get('num',None) # Num means Objective Function number XX
-    X = globvar.X
+    nvar = KrigInfo["nvar"]
+    kernel = KrigInfo["kernel"]
+    nkernel = KrigInfo["nkernel"]
+    wgkf = KrigInfo["wgkf"]
+    idx = KrigInfo["idx"]
     p = 2  # from reference
 
-    if globvar.multiobj == True:
-        num = globvar.num
+    if KrigInfo["multiobj"] == True:
+        num = KrigInfo["num"]
 
     if num == None:
-        y = globvar.y
-        theta = 10 ** globvar.Theta
-        U = globvar.U
-        plscoeff = globvar.plscoeff
+        if KrigInfo["standardization"] == False:
+            X = KrigInfo["X"]
+            y = KrigInfo["y"]
+        else:
+            X = KrigInfo["X_norm"]
+            if "y_norm" in KrigInfo:
+                y = KrigInfo["y_norm"]
+            else:
+                y = KrigInfo["y"]
+        theta = 10 ** KrigInfo["Theta"]
+        U = KrigInfo["U"]
+        PHI = KrigInfo["F"]
+        BE = KrigInfo["BE"]
+        if KrigInfo["type"].lower() == "kpls":
+            plscoeff = KrigInfo["plscoeff"]
     else:
-        y = globvar.y[num]
-        theta = 10**globvar.Theta[num]
-        U = globvar.U[num]
-        plscoeff = globvar.plscoeff[num]
+        if KrigInfo["standardization"] == False:
+            X = KrigInfo["X"][num]
+            y = KrigInfo["y"][num]
+        else:
+            X = KrigInfo["X_norm"][num]
+            if "y_norm" in KrigInfo:
+                y = KrigInfo["y_norm"][num]
+            else:
+                y = KrigInfo["y"][num]
+        theta = 10**KrigInfo["Theta"][num]
+        U = KrigInfo["U"][num]
+        PHI = KrigInfo["F"][num]
+        BE = KrigInfo["BE"][num]
+        if KrigInfo["type"].lower() == "kpls":
+            plscoeff = KrigInfo["plscoeff"][num]
 
-    if globvar.standardization == True:
-        x = (x-globvar.X_mean)/globvar.X_std
+    if KrigInfo["standardization"] == True:
+        if KrigInfo["normtype"] == "default":
+            x = standardize(x, 0, type=KrigInfo["normtype"], range=np.vstack((KrigInfo["lb"],KrigInfo["ub"])))
+        elif KrigInfo["normtype"] == "std":
+            x = (x - KrigInfo["X_mean"]) / KrigInfo["X_std"]
+
 
     #Calculate number of sample points
     n = np.ma.size(X, axis=0)
+    npred = np.size(x,axis=0)
 
-    #vector of ones
-    one = np.ones((n, 1), float)
-
-    #calculate mu
-    temp11 = mldivide(np.transpose(U), y)  # just a temporary variable for debugging
-    temp1 = (mldivide(U, temp11))  # just a temporary variable for debugging
-    temp21 = mldivide(np.transpose(U), one)  # just a temporary variable for debugging
-    temp2 = (mldivide(U, temp21))  # just a temporary variable for debugging
-    mu = np.dot(np.transpose(one), temp1) / np.dot(np.transpose(one), temp2)
+    #Construct regression matrix for prediction
+    bound = np.vstack((- np.ones(shape=[1, KrigInfo["nvar"]]), np.ones(shape=[1, KrigInfo["nvar"]])))
+    PC = compute_regression_mat(idx,x,bound,np.ones(shape=[KrigInfo["nvar"]]))
+    fpc = np.dot(PC,BE)
 
     #initialise psi to vector ones
     psi = np.ones((n,1),float)
+    PsiComp = np.zeros(shape=[n, npred, nvar])
 
     #fill psi vector
-    if globvar.type == "kriging":
-        for i in range (0,n):
-            psi[i]= np.exp(-1*np.sum(theta*abs(X[i,:]-x)**p))
+    if KrigInfo["type"].lower() == "kriging":
+        for ii in range(0,nkernel):
+            PsiComp[:,:,ii] = wgkf[ii]*calckernel(X,x,theta,nvar,type=kernel[ii])
+        psi = np.sum(PsiComp,2)
+        # for i in range (0,n):
+        #     psi[i]= np.exp(-1*np.sum(theta*abs(X[i,:]-x)**p))
 
-    elif globvar.type == "kpls":
+    elif KrigInfo["type"].lower() == "kpls":
         for i in range(0, n):
             psi[i] = np.exp(-1 * np.sum(theta * np.dot(((X[i, :] - x) ** p), (plscoeff ** p))))
 
     #calculate prediction
-    f = mu + np.dot(np.transpose(psi), mldivide(U,mldivide(np.transpose(U),(y - one*mu))))
+    f = fpc + np.dot(np.transpose(psi), mldivide(U,mldivide(np.transpose(U),(y - PHI*BE))))
     if num == None:
-        if globvar.standardization == True:
-            f = (globvar.y_mean + globvar.y_std*f).ravel()
+        if KrigInfo["norm_y"] == True:
+            f = (KrigInfo["y_mean"] + KrigInfo["y_std"]*f)
     else:
-        if globvar.standardization == True:
-            f = (globvar.y_mean[num] + globvar.y_std[num]*f).ravel()
+        if KrigInfo["norm_y"] == True:
+            f = (KrigInfo["y_mean"][num] + KrigInfo["y_std"][num]*f)
 
     return f

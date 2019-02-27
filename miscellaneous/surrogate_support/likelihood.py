@@ -23,42 +23,89 @@
 # You should have received a copy of the GNU General Public License and GNU
 # Lesser General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
-import globvar
 import numpy as np
 from numpy.linalg import solve as mldivide
 import cma.evolution_strategy as cmaes
+from miscellaneous.surrogate_support.kernel import calckernel
+from miscellaneous.surrogate_support.hyp_trf import rescale
 
-def likelihood (x,**num):
-    num = num.get('num',None)
-    X = globvar.X
+def likelihood (x,KrigInfo,**kwargs):
+    num = kwargs.get('num',None)
+    mode = kwargs.get('retresult', "default")
+    nvar = KrigInfo["nvar"]
+    F = KrigInfo["F"]
+    kernel = KrigInfo["kernel"]
+    nkernel = KrigInfo["nkernel"]
 
-    if globvar.multiobj == True:
-        num = globvar.num
+    if KrigInfo["multiobj"] == True:
+        num = KrigInfo["num"]
 
     if num == None:
-        y = globvar.y
-        plscoeff = globvar.plscoeff
+        if KrigInfo["standardization"] == False:
+            X = KrigInfo["X"]
+            y = KrigInfo["y"]
+        else:
+            X = KrigInfo["X_norm"]
+            if "y_norm" in KrigInfo:
+                y = KrigInfo["y_norm"]
+            else:
+                y = KrigInfo["y"]
+        if KrigInfo["type"].lower() == "kpls":
+            plscoeff = KrigInfo["plscoeff"]
     else:
-        y = globvar.y[num]
-        plscoeff = globvar.plscoeff[num]
+        if KrigInfo["standardization"] == False:
+            X = KrigInfo["X"][num]
+            y = KrigInfo["y"][num]
+        else:
+            X = KrigInfo["X_norm"][num]
+            if "y_norm" in KrigInfo:
+                y = KrigInfo["y_norm"][num]
+            else:
+                y = KrigInfo["y"][num]
+        if KrigInfo["type"].lower() == "kpls":
+            plscoeff = KrigInfo["plscoeff"][num]
 
-    theta = 10**x
+    if len(x) == nvar: # Nugget is not tunable, single kernel
+        nugget = KrigInfo["nugget"]
+        eps = 10. ** nugget
+        wgkf = np.array([1])
+    elif len(x) == nvar+1: # Nugget is tunable, single kernel
+        # nugget = rescale(x[nvar],KrigInfo["lbhyp"][0],KrigInfo["ubhyp"][0],KrigInfo["lbhyp"][nvar],KrigInfo["ubhyp"][nvar])[0]
+        nugget = x[nvar]
+        eps = 10. ** nugget
+        wgkf = np.array([1])
+    elif len(x) == nvar+nkernel: # Nugget is not tunable, multiple kernels
+        nugget = KrigInfo["nugget"]
+        eps = 10. ** nugget
+        # weight = rescale(x[nvar:nvar+nkernel],KrigInfo["lbhyp"][0],KrigInfo["ubhyp"][0],0,1)
+        weight = x[nvar:nvar+nkernel]
+        wgkf = weight/np.sum(weight)
+    elif len(x) == nvar+nkernel+1:
+        nugget = x[nvar]
+        eps = 10. ** nugget
+        weight = x[nvar+1:nvar+nkernel+1]
+        wgkf = weight / np.sum(weight)
+
+    theta = 10**(x[0:nvar])
+    KrigInfo["Theta"] = x[0:nvar]
+    KrigInfo["nugget"] = nugget
+    KrigInfo["wgkf"] = wgkf
     p = 2 #from reference
     n = np.ma.size(X,axis=0)
-    one = np.ones((n,1),float)
-    eps = 10.*np.finfo(np.double).eps
+    # one = np.ones((n,1),float)
 
     #Pre-allocate memory
     Psi = np.zeros(shape=[n,n])
+    PsiComp = np.zeros(shape=[n,n,nvar])
 
 
     #Build upper half of correlation matrix
-    if globvar.type == "kriging":
-        for i in range (0,n):
-            for j in range (i+1,n):
-                Psi[i,j] = np.exp(-1*np.sum(theta*abs(X[i,:]-X[j,:])**p))
+    if KrigInfo["type"].lower() == "kriging":
+        for ii in range(0,nkernel):
+            PsiComp[:,:,ii] = wgkf[ii]*calckernel(X,X,theta,nvar,type=kernel[ii])
+        Psi = np.sum(PsiComp,2)
 
-    elif globvar.type == "kpls":
+    elif KrigInfo["type"].lower() == "kpls":
         for i in range (0,n):
             for j in range (i+1,n):
                 Psi[i,j] = np.exp(-1*np.sum(theta* np.dot( ((X[i,:] - X[j,:])**p) , (plscoeff**p) )))
@@ -66,8 +113,11 @@ def likelihood (x,**num):
 
     #Add upper and lower halves and diagonal of ones plus
     #small number to reduce ill-conditioning
-    Psi = Psi + np.transpose(Psi) + np.eye(n) + (np.eye(n)*(eps)) #(np.eye(n)*eps)
+    # Psi = Psi + np.transpose(Psi) + np.eye(n) + (np.eye(n)*(eps)) #(np.eye(n)*eps)
+    Psi = Psi + (np.eye(n) * (eps))
     testeig = np.linalg.eigvals(Psi)
+    if np.any (np.linalg.eigvals(Psi)<0):
+        print("Not positive definite")
     #print("eigen = ",testeig)
 
     #try:
@@ -82,28 +132,40 @@ def likelihood (x,**num):
         # Sum lns of diagonal to find ln(abs(det(Psi)))
         LnDetPsi = 2 * np.sum(np.log(abs(np.diag(U))))
 
+        # Compute the coefficients of regression function
         temp11 = mldivide(np.transpose(U),y) #just a temporary variable for debugging
         temp1  = (mldivide(U,temp11)) #just a temporary variable for debugging
-        temp21 = mldivide(np.transpose(U),one) #just a temporary variable for debugging
+        temp21 = mldivide(np.transpose(U),F) #just a temporary variable for debugging
         temp2  = (mldivide(U,temp21)) #just a temporary variable for debugging
-        tempmu     = np.dot(np.transpose(one),temp1)/np.dot(np.transpose(one),temp2)
-        mu = tempmu[0,0]
-        temp31 = mldivide(np.transpose(U),(y-one*mu)) #just a temporary variable for debugging
+        tempmu     = np.dot(np.transpose(F),temp1)/np.dot(np.transpose(F),temp2)
+        BE = tempmu[0,0]
+
+        # Use back-substitution of Cholesky instead of inverse
+        temp31 = mldivide(np.transpose(U),(y-F*BE)) #just a temporary variable for debugging
         temp3  = mldivide(U,temp31) #just a temporary variable for debugging
-        SigmaSqr     = (np.dot(np.transpose(y - one * mu),(temp3)))/n
+        SigmaSqr     = (np.dot(np.transpose(y - F * BE),(temp3)))/n
+
         tempNegLnLike    = -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
         NegLnLike = tempNegLnLike[0,0]
     except:
         NegLnLike = 10000
+        print("Matrix is ill-conditioned, penalty is used on NegLnLike value")
 
     if num == None:
-        globvar.U = U
-        globvar.Psi = Psi
+        KrigInfo["U"] = U
+        KrigInfo["Psi"] = Psi
+        KrigInfo["BE"] = BE
     else:
-        globvar.U[num] = np.array(U)
-        globvar.Psi[num] = np.array(Psi)
-    # return (NegLnLike,U,Psi)
-    return NegLnLike
+        KrigInfo["U"][num] = np.array(U)
+        KrigInfo["Psi"][num] = np.array(Psi)
+        KrigInfo["BE"][num] = np.array(BE)
+
+    if mode.lower() == "default":
+        return NegLnLike
+    elif mode.lower() == "all":
+        return KrigInfo
+    else:
+        raise TypeError("Only have two modes, default and all, default return NegLnLike, all return KrigInfo")
     print ("Psi = ",Psi)
 
 

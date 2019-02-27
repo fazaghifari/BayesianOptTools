@@ -33,6 +33,9 @@ import time
 # plt.legend(['Training data', 'Prediction'])
 # plt.show()
 
+#Initialization
+KrigInfo = dict()
+kernel = ["gaussian","matern32"]
 # Sampling
 nsample = 20
 nvar = 2
@@ -40,18 +43,27 @@ ub = np.array([10,15])
 lb = np.array([-5,0])
 nup = 3
 sampoption = "halton"
-
 samplenorm,sample = sampling(sampoption,nvar,nsample,result="real",upbound=ub,lobound=lb)
 X = sample
-
 #Evaluate sample
 y = evaluate(X,"branin")
 
+#Set global variables
+KrigInfo["X"] = X
+KrigInfo["y"] = y
+KrigInfo["nvar"] = nvar
+KrigInfo["nsamp"]= nsample
+KrigInfo["nrestart"] = 5
+KrigInfo["ub"]= ub
+KrigInfo["lb"]= lb
+KrigInfo["kernel"] = kernel
+KrigInfo["nugget"] = -6
+
 #Run Kriging
 t = time.time()
-NegLnLike, U, Psi = kpls(X,y,nvar,standardization=True,principalcomp=1,num=0)
+KrigInfo = ordinarykrig(KrigInfo,standardization=True,normtype="default",normalize_y=False)
 elapsed = time.time() - t
-print("elapsed time: ", elapsed)
+print("elapsed time for train Kriging model: ", elapsed,"s")
 
 #Perform kriging with EI
 # globvar.Option = 'NegLogExpImp'
@@ -75,8 +87,8 @@ Xeval = sampleeval
 #Evaluate output
 yeval = np.zeros(shape=[neval,1])
 yact = np.zeros(shape=[neval,1])
+yeval= prediction(Xeval,KrigInfo)
 for ii in range(0,neval):
-    yeval[ii,0]= prediction(Xeval[ii,:])
     yact[ii,0]= branin(Xeval[ii,:])
 
 hasil = np.hstack((yeval,yact))
