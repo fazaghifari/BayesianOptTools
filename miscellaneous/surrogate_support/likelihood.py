@@ -143,7 +143,7 @@ def likelihood (x,KrigInfo,**kwargs):
         # Use back-substitution of Cholesky instead of inverse
         temp31 = mldivide(np.transpose(U),(y-F*BE)) #just a temporary variable for debugging
         temp3  = mldivide(U,temp31) #just a temporary variable for debugging
-        SigmaSqr     = (np.dot(np.transpose(y - F * BE),(temp3)))/n
+        SigmaSqr = (np.dot(np.transpose(y - F * BE),(temp3)))/n
 
         tempNegLnLike    = -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
         NegLnLike = tempNegLnLike[0,0]
@@ -155,10 +155,12 @@ def likelihood (x,KrigInfo,**kwargs):
         KrigInfo["U"] = U
         KrigInfo["Psi"] = Psi
         KrigInfo["BE"] = BE
+        KrigInfo["SigmaSqr"] = SigmaSqr
     else:
         KrigInfo["U"][num] = np.array(U)
         KrigInfo["Psi"][num] = np.array(Psi)
         KrigInfo["BE"][num] = np.array(BE)
+        KrigInfo["SigmaSqr"][num] = SigmaSqr
 
     if mode.lower() == "default":
         return NegLnLike

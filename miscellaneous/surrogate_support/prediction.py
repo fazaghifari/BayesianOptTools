@@ -1,44 +1,48 @@
-# f=pred(x)
-#
-# Calculates a Kriging prediction at x
-#
-# Inputs:
-# 	x - 1 x k vetor of design variables
-#
-# Global variables used:
-# 	ModelInfo.X - n x k matrix of sample locations
-# 	ModelInfo.y - n x 1 vector of observed data
-#   ModelInfo.Theta - 1 x k vector of log(theta)
-#   ModelInfo.U - n x n Cholesky factorisation of Psi
-#
-# Outputs:
-# 	f - scalar kriging prediction
-#
-# Copyright 2007 A I J Forrester
-#
-# This program is free software: you can redistribute it and/or modify  it
-# under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or any
-# later version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
-# General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License and GNU
-# Lesser General Public License along with this program. If not, see
-# <http://www.gnu.org/licenses/>.
-
 import numpy as np
 from numpy.linalg import solve as mldivide
 from miscellaneous.surrogate_support.kernel import calckernel
 from miscellaneous.sampling.samplingplan import standardize
 from miscellaneous.surrogate_support.trendfunction import compute_regression_mat
+from math import erf
 
-def prediction (x,KrigInfo,**kwargs):
-    # extract variables from data structure
-    # slower, but makes code easier to follow
+def prediction (x,KrigInfo,predtype,**kwargs):
+    """
+    Calculates expected improvement (for optimization), SSqr, Kriging prediction, and prediction from regression function
+
+    Information: This function is a modification from "Forrester, A., Sobester, A., & Keane, A. (2008). Engineering design via surrogate modelling:  a practical guide. John Wiley & Sons."
+
+    Inputs:
+      XP - Prediction site (will be normalized to [-1,1])
+      KrigInfo - A structure containing necessary information of a constructed Kriging model
+      predictiontype - The output as defined by the user
+          'pred' - for Kriging prediction.
+          'SSqr' - for Kriging prediction error.
+          'trend' - for computed trend function.
+          'EI' - for expected improvement.
+
+    Information used in KrigInfo for krigprediction
+      KrigInfo.Xnorm - (nsamp x nvar) matrix of normalized experimental design.
+      KrigInfo.Y - (nsamp x 1) vector of responses.
+      KrigInfo.PHI - (nsamp x nind) matrix of regression function.
+      KrigInfo.idx - (nind x nvar) matrix consisting of polynomial index for regression function.
+      KrigInfo.kernel - Type of kernel function.
+      KrigInfo.wgkf - (1 x nkrnl) vector of weights for kernel functions.
+      KrigInfo.U - Choleski factorisation of correlation matrix.
+      KrigInfo.xparam - Hyperparameters of the Kriging model.
+      KrigInfo.BE - Coefficients of regression function
+      KrigInfo.SigmaSqr - SigmaSqr (Kriging variance) of the Kriging model
+
+    Outputs:
+      output - The output as defined by the user (see 'predictiontype').
+      SSqr - Kriging prediction error at the prediction site.
+      y_hat - Kriging prediction.
+      fpc - Kriging trend function.
+
+    Information:
+     - Note that the output can be vectorized.
+
+    Author: Pramudita Satria Palar(pramsatriapalar@gmail.com, pramsp@ftmd.itb.ac.id)
+    """
     num = kwargs.get('num',None) # Num means Objective Function number XX
     nvar = KrigInfo["nvar"]
     kernel = KrigInfo["kernel"]
@@ -64,6 +68,7 @@ def prediction (x,KrigInfo,**kwargs):
         U = KrigInfo["U"]
         PHI = KrigInfo["F"]
         BE = KrigInfo["BE"]
+        SigmaSqr = KrigInfo["SigmaSqr"]
         if KrigInfo["type"].lower() == "kpls":
             plscoeff = KrigInfo["plscoeff"]
     else:
@@ -80,6 +85,7 @@ def prediction (x,KrigInfo,**kwargs):
         U = KrigInfo["U"][num]
         PHI = KrigInfo["F"][num]
         BE = KrigInfo["BE"][num]
+        SigmaSqr = KrigInfo["SigmaSqr"][num]
         if KrigInfo["type"].lower() == "kpls":
             plscoeff = KrigInfo["plscoeff"][num]
 
@@ -124,4 +130,40 @@ def prediction (x,KrigInfo,**kwargs):
         if KrigInfo["norm_y"] == True:
             f = (KrigInfo["y_mean"][num] + KrigInfo["y_std"][num]*f)
 
-    return f
+    #compute sigma-squared error
+    dummy1 = mldivide(U,mldivide(np.transpose(U),psi))
+    dummy2 = mldivide(U, mldivide(np.transpose(U), PHI))
+    term1 = (1 - np.sum(np.transpose(psi)*np.transpose(dummy1),1))
+    ux = (np.dot(np.transpose(PHI),dummy1))-np.transpose(PC)
+    term2 = ux*(mldivide(np.dot(np.transpose(PHI),dummy2),ux))
+    SSqr = np.dot(SigmaSqr,(term1+term2))
+    s = (abs(SSqr))**0.5
+
+    #Switch prediction type
+    if predtype.lower() == "pred":
+        output = f
+    elif predtype.lower() == "ssqr":
+        output = SSqr
+    elif predtype.lower() == "fpc":
+        output = fpc
+    elif predtype.lower() == "lcb":
+        output = f - np.dot(KrigInfo["sigmalcb"],SSqr)
+    elif predtype.lower() == "ebe":
+        output = -SSqr
+    elif predtype.lower() == "ei":
+        yBest = np.min(y)
+        if SSqr == 0:
+            ExpImp = 0
+        else:
+            EITermOne = (yBest - f) * (0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((yBest - f) / s)))
+            EITermTwo = s * (1 / np.sqrt(2 * np.pi)) * np.exp(-(1 / 2) * (((yBest - f) ** 2) / SSqr))
+            ExpImp = np.log10(EITermOne + EITermTwo + 1e-10)
+        output = -ExpImp
+    elif predtype.lower() == "poi":
+        ProbImp = 0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((np.min(y) - f) / s))
+        output = -ProbImp
+    elif predtype.lower() == "pof":
+        ProbFeas = 0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((KrigInfo["limit"] - (-f)) / s))
+        output = ProbFeas
+
+    return output

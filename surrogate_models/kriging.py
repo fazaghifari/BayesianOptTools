@@ -125,6 +125,7 @@ def ordinarykrig (KrigInfo,**kwargs):
         KrigInfo["y_mean"] = [0] * (num + 1)
         KrigInfo["y_std"] = [0] * (num + 1)
         KrigInfo["y_norm"] = [0] * (num + 1)
+        KrigInfo["SigmaSqr"] = [0] * (num + 1)
         KrigInfo["y"][num]= Y[:,num]
 
         # Standardize X and y

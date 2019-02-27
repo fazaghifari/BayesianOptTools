@@ -2,13 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="17f43baa-4825-4f32-b1d9-678fc44a7e43" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/miscellaneous/sampling/rlh.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/miscellaneous/surrogate_support/hyp_trf.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/miscellaneous/surrogate_support/trendfunction.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/globvar.py" afterPath="$PROJECT_DIR$/globvar.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/miscellaneous/sampling/samplingplan.py" afterPath="$PROJECT_DIR$/miscellaneous/sampling/samplingplan.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/miscellaneous/surrogate_support/kernel.py" afterPath="$PROJECT_DIR$/miscellaneous/surrogate_support/kernel.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/miscellaneous/surrogate_support/likelihood.py" afterPath="$PROJECT_DIR$/miscellaneous/surrogate_support/likelihood.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/miscellaneous/surrogate_support/prediction.py" afterPath="$PROJECT_DIR$/miscellaneous/surrogate_support/prediction.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/surrogate_models/kriging.py" afterPath="$PROJECT_DIR$/surrogate_models/kriging.py" />
@@ -26,8 +20,8 @@
       <file leaf-file-name="testmain.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/testmain.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="413">
-              <caret line="98" column="0" lean-forward="false" selection-start-line="98" selection-start-column="0" selection-end-line="98" selection-end-column="0" />
+            <state relative-caret-position="224">
+              <caret line="89" column="36" lean-forward="true" selection-start-line="89" selection-start-column="36" selection-end-line="89" selection-end-column="36" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -38,14 +32,12 @@
       <file leaf-file-name="kriging.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/surrogate_models/kriging.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="189">
-              <caret line="198" column="121" lean-forward="false" selection-start-line="198" selection-start-column="88" selection-end-line="198" selection-end-column="121" />
+            <state relative-caret-position="126">
+              <caret line="213" column="38" lean-forward="true" selection-start-line="213" selection-start-column="38" selection-end-line="213" selection-end-column="38" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
-                <element signature="e#4433#6875#0" expanded="false" />
-                <element signature="e#7149#8388#0" expanded="false" />
-                <element signature="e#8415#8489#0" expanded="false" />
-                <element signature="e#10142#13494#0" expanded="false" />
+                <element signature="e#7196#8435#0" expanded="false" />
+                <element signature="e#8462#8536#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -55,7 +47,7 @@
         <entry file="file://$PROJECT_DIR$/miscellaneous/surrogate_support/trendfunction.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="105">
-              <caret line="100" column="42" lean-forward="true" selection-start-line="100" selection-start-column="42" selection-end-line="100" selection-end-column="42" />
+              <caret line="100" column="42" lean-forward="false" selection-start-line="100" selection-start-column="42" selection-end-line="100" selection-end-column="42" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -78,8 +70,8 @@
       <file leaf-file-name="likelihood.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/miscellaneous/surrogate_support/likelihood.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="161">
-              <caret line="97" column="0" lean-forward="false" selection-start-line="97" selection-start-column="0" selection-end-line="97" selection-end-column="0" />
+            <state relative-caret-position="2709">
+              <caret line="147" column="0" lean-forward="false" selection-start-line="147" selection-start-column="0" selection-end-line="147" selection-end-column="0" />
               <folding>
                 <element signature="e#1116#1134#0" expanded="true" />
               </folding>
@@ -90,10 +82,23 @@
       <file leaf-file-name="prediction.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/miscellaneous/surrogate_support/prediction.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="168">
-              <caret line="117" column="25" lean-forward="true" selection-start-line="117" selection-start-column="25" selection-end-line="117" selection-end-column="25" />
+            <state relative-caret-position="224">
+              <caret line="163" column="25" lean-forward="true" selection-start-line="163" selection-start-column="25" selection-end-line="163" selection-end-column="25" />
               <folding>
-                <element signature="e#1086#1104#0" expanded="true" />
+                <element signature="e#0#18#0" expanded="true" />
+                <element signature="e#338#2166#1" expanded="false" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="EIpred.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/miscellaneous/surrogate_support/EIpred.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="154">
+              <caret line="89" column="70" lean-forward="true" selection-start-line="89" selection-start-column="16" selection-end-line="89" selection-end-column="70" />
+              <folding>
+                <element signature="e#819#837#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -172,12 +177,12 @@
         <option value="$PROJECT_DIR$/miscellaneous/sampling/samplingplan.py" />
         <option value="$PROJECT_DIR$/miscellaneous/sampling/rlh.py" />
         <option value="$PROJECT_DIR$/miscellaneous/surrogate_support/hyp_trf.py" />
-        <option value="$PROJECT_DIR$/testmain.py" />
-        <option value="$PROJECT_DIR$/testmain.py" />
         <option value="$PROJECT_DIR$/testing.py" />
-        <option value="$PROJECT_DIR$/surrogate_models/kriging.py" />
         <option value="$PROJECT_DIR$/miscellaneous/surrogate_support/trendfunction.py" />
         <option value="$PROJECT_DIR$/miscellaneous/surrogate_support/likelihood.py" />
+        <option value="$PROJECT_DIR$/surrogate_models/kriging.py" />
+        <option value="$PROJECT_DIR$/testmain.py" />
+        <option value="$PROJECT_DIR$/testmain.py" />
         <option value="$PROJECT_DIR$/miscellaneous/surrogate_support/prediction.py" />
       </list>
     </option>
@@ -203,6 +208,8 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
+      <pane id="Scratches" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -214,6 +221,12 @@
               <item name="BayesianOptTools" type="b2602c69:ProjectViewProjectNode" />
               <item name="BayesianOptTools" type="462c0819:PsiDirectoryNode" />
               <item name="miscellaneous" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="BayesianOptTools" type="b2602c69:ProjectViewProjectNode" />
+              <item name="BayesianOptTools" type="462c0819:PsiDirectoryNode" />
+              <item name="miscellaneous" type="462c0819:PsiDirectoryNode" />
+              <item name="optim_support" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="BayesianOptTools" type="b2602c69:ProjectViewProjectNode" />
@@ -274,8 +287,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scratches" />
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -464,7 +475,7 @@
     <frame x="-8" y="0" width="976" height="1038" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33333334" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33444443" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32915717" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3940092" sideWeight="0.5088889" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32915717" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
@@ -480,7 +491,7 @@
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32949308" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.32915717" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
     </layout>
   </component>
@@ -492,18 +503,8 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/testmain.py</url>
-          <line>98</line>
-          <option name="timeStamp" value="160" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/testmain.py</url>
           <line>82</line>
           <option name="timeStamp" value="171" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/testmain.py</url>
-          <line>93</line>
-          <option name="timeStamp" value="172" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/testing.py</url>
@@ -518,7 +519,7 @@
           </properties>
         </breakpoint>
       </default-breakpoints>
-      <option name="time" value="290" />
+      <option name="time" value="294" />
     </breakpoint-manager>
     <watches-manager>
       <configuration name="PythonConfigurationType">
@@ -556,10 +557,8 @@
           <caret line="11" column="34" lean-forward="false" selection-start-line="11" selection-start-column="34" selection-end-line="11" selection-end-column="34" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
-            <element signature="e#4433#6875#0" expanded="false" />
-            <element signature="e#7149#8388#0" expanded="false" />
-            <element signature="e#8415#8489#0" expanded="false" />
-            <element signature="e#10142#13494#0" expanded="false" />
+            <element signature="e#7196#8435#0" expanded="false" />
+            <element signature="e#8462#8536#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -625,10 +624,8 @@
           <caret line="11" column="34" lean-forward="true" selection-start-line="11" selection-start-column="34" selection-end-line="11" selection-end-column="34" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
-            <element signature="e#4433#6875#0" expanded="false" />
-            <element signature="e#7149#8388#0" expanded="false" />
-            <element signature="e#8415#8489#0" expanded="false" />
-            <element signature="e#10142#13494#0" expanded="false" />
+            <element signature="e#7196#8435#0" expanded="false" />
+            <element signature="e#8462#8536#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -775,13 +772,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/miscellaneous/surrogate_support/EIpred.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="768">
-          <caret line="74" column="67" lean-forward="false" selection-start-line="74" selection-start-column="67" selection-end-line="74" selection-end-column="67" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/globvar.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="168">
@@ -841,7 +831,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="161">
           <caret line="674" column="0" lean-forward="false" selection-start-line="674" selection-start-column="0" selection-end-line="674" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -858,7 +847,7 @@
     <entry file="file://$PROJECT_DIR$/miscellaneous/surrogate_support/trendfunction.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="105">
-          <caret line="100" column="42" lean-forward="true" selection-start-line="100" selection-start-column="42" selection-end-line="100" selection-end-column="42" />
+          <caret line="100" column="42" lean-forward="false" selection-start-line="100" selection-start-column="42" selection-end-line="100" selection-end-column="42" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
@@ -867,8 +856,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/miscellaneous/surrogate_support/likelihood.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="161">
-          <caret line="97" column="0" lean-forward="false" selection-start-line="97" selection-start-column="0" selection-end-line="97" selection-end-column="0" />
+        <state relative-caret-position="2709">
+          <caret line="147" column="0" lean-forward="false" selection-start-line="147" selection-start-column="0" selection-end-line="147" selection-end-column="0" />
           <folding>
             <element signature="e#1116#1134#0" expanded="true" />
           </folding>
@@ -877,34 +866,43 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/surrogate_models/kriging.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="189">
-          <caret line="198" column="121" lean-forward="false" selection-start-line="198" selection-start-column="88" selection-end-line="198" selection-end-column="121" />
+        <state relative-caret-position="126">
+          <caret line="213" column="38" lean-forward="true" selection-start-line="213" selection-start-column="38" selection-end-line="213" selection-end-column="38" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
-            <element signature="e#4433#6875#0" expanded="false" />
-            <element signature="e#7149#8388#0" expanded="false" />
-            <element signature="e#8415#8489#0" expanded="false" />
-            <element signature="e#10142#13494#0" expanded="false" />
+            <element signature="e#7196#8435#0" expanded="false" />
+            <element signature="e#8462#8536#0" expanded="false" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/testmain.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="413">
-          <caret line="98" column="0" lean-forward="false" selection-start-line="98" selection-start-column="0" selection-end-line="98" selection-end-column="0" />
+        <state relative-caret-position="224">
+          <caret line="89" column="36" lean-forward="true" selection-start-line="89" selection-start-column="36" selection-end-line="89" selection-end-column="36" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/miscellaneous/surrogate_support/EIpred.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="154">
+          <caret line="89" column="70" lean-forward="true" selection-start-line="89" selection-start-column="16" selection-end-line="89" selection-end-column="70" />
+          <folding>
+            <element signature="e#819#837#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/miscellaneous/surrogate_support/prediction.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="168">
-          <caret line="117" column="25" lean-forward="true" selection-start-line="117" selection-start-column="25" selection-end-line="117" selection-end-column="25" />
+        <state relative-caret-position="224">
+          <caret line="163" column="25" lean-forward="true" selection-start-line="163" selection-start-column="25" selection-end-line="163" selection-end-column="25" />
           <folding>
-            <element signature="e#1086#1104#0" expanded="true" />
+            <element signature="e#0#18#0" expanded="true" />
+            <element signature="e#338#2166#1" expanded="false" />
           </folding>
         </state>
       </provider>

@@ -35,7 +35,7 @@ import time
 
 #Initialization
 KrigInfo = dict()
-kernel = ["gaussian","matern32"]
+kernel = ["gaussian"]
 # Sampling
 nsample = 20
 nvar = 2
@@ -87,7 +87,7 @@ Xeval = sampleeval
 #Evaluate output
 yeval = np.zeros(shape=[neval,1])
 yact = np.zeros(shape=[neval,1])
-yeval= prediction(Xeval,KrigInfo)
+yeval= prediction(Xeval,KrigInfo,"pred")
 for ii in range(0,neval):
     yact[ii,0]= branin(Xeval[ii,:])
 
