@@ -2,31 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="17f43baa-4825-4f32-b1d9-678fc44a7e43" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/KrigDemo.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/miscellaneous/surrogate_support/initinfo.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/optim_tools/BOunc.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/optim_tools/acquifun_opt.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/optim_tools/ehvi/EHVIcomputation.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/optim_tools/ehvi/__init__.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/optim_tools/ehvi/exi2d.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/optim_tools/ehvi/exipsi.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/optim_tools/ehvi/gaussfcn.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/optim_tools/ehvi/hvolume2d.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/optim_tools/parego.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/optim_tools/searchpareto.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/uncMOBOdemo.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/uncSOBOdemo.py" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/testcase/analyticalfcn/onedtestcase.py" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/testmain.py" afterPath="" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.gitignore" afterPath="$PROJECT_DIR$/.gitignore" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/globvar.py" afterPath="$PROJECT_DIR$/globvar.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/miscellaneous/sampling/samplingplan.py" afterPath="$PROJECT_DIR$/miscellaneous/sampling/samplingplan.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/miscellaneous/surrogate_support/likelihood.py" afterPath="$PROJECT_DIR$/miscellaneous/surrogate_support/likelihood.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/miscellaneous/surrogate_support/prediction.py" afterPath="$PROJECT_DIR$/miscellaneous/surrogate_support/prediction.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/miscellaneous/surrogate_support/trendfunction.py" afterPath="$PROJECT_DIR$/miscellaneous/surrogate_support/trendfunction.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/surrogate_models/kriging.py" afterPath="$PROJECT_DIR$/surrogate_models/kriging.py" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/testcase/analyticalfcn/twodtestcase.py" afterPath="$PROJECT_DIR$/testcase/analyticalfcn/cases.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
