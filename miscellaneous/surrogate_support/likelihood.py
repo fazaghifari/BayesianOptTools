@@ -29,8 +29,7 @@ import cma.evolution_strategy as cmaes
 from miscellaneous.surrogate_support.kernel import calckernel
 from miscellaneous.surrogate_support.hyp_trf import rescale
 
-def likelihood (x,KrigInfo,**kwargs):
-    num = kwargs.get('num',None)
+def likelihood (x,KrigInfo,num=None,**kwargs):
     mode = kwargs.get('retresult', "default")
     nvar = KrigInfo["nvar"]
     F = KrigInfo["F"]
@@ -54,10 +53,11 @@ def likelihood (x,KrigInfo,**kwargs):
             plscoeff = KrigInfo["plscoeff"]
     else:
         if KrigInfo["standardization"] == False:
-            X = KrigInfo["X"][num]
+            X = KrigInfo["X"]
             y = KrigInfo["y"][num]
         else:
-            X = KrigInfo["X_norm"][num]
+            X = KrigInfo["X_norm"]
+            F = KrigInfo["F"][num]
             if "y_norm" in KrigInfo:
                 y = KrigInfo["y_norm"][num]
             else:
@@ -86,17 +86,23 @@ def likelihood (x,KrigInfo,**kwargs):
         weight = x[nvar+1:nvar+nkernel+1]
         wgkf = weight / np.sum(weight)
 
+
     theta = 10**(x[0:nvar])
-    KrigInfo["Theta"] = x[0:nvar]
-    KrigInfo["nugget"] = nugget
-    KrigInfo["wgkf"] = wgkf
+    if num == None:
+        KrigInfo["Theta"] = x[0:nvar]
+        KrigInfo["nugget"] = nugget
+        KrigInfo["wgkf"] = wgkf
+    else:
+        KrigInfo["Theta"][num] = x[0:nvar]
+        KrigInfo["nugget"] = nugget
+        KrigInfo["wgkf"][num] = wgkf
     p = 2 #from reference
     n = np.ma.size(X,axis=0)
     # one = np.ones((n,1),float)
 
     #Pre-allocate memory
     Psi = np.zeros(shape=[n,n])
-    PsiComp = np.zeros(shape=[n,n,nvar])
+    PsiComp = np.zeros(shape=[n,n,nkernel])
 
 
     #Build upper half of correlation matrix

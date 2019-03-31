@@ -9,6 +9,7 @@ from sklearn.cross_decomposition.pls_ import PLSRegression as pls
 from scipy.optimize import minimize_scalar
 from miscellaneous.sampling.samplingplan import standardize
 from miscellaneous.surrogate_support.trendfunction import polytruncation, compute_regression_mat
+from scipy.optimize import minimize
 import cma
 
 def ordinarykrig (KrigInfo,**kwargs):
@@ -27,6 +28,7 @@ def ordinarykrig (KrigInfo,**kwargs):
     eps = np.finfo(float).eps
 
     num = kwargs.get('num',None) #Means objective function number XX
+    disp = kwargs.get('disp',None)
     ubvalue = kwargs.get('ub', 3)
     lbvalue = kwargs.get('lb', -3)
     standardization = kwargs.get('standardization', False)
@@ -35,7 +37,7 @@ def ordinarykrig (KrigInfo,**kwargs):
     nbhyp = KrigInfo["nvar"]
     Y = KrigInfo["y"]
     X = KrigInfo["X"]
-    sigmacmaes = (ubvalue-lbvalue)/6
+    sigmacmaes = (ubvalue-lbvalue)/5
 
     # upperbound and lowerbound for Theta
     ubtheta = np.zeros(shape=[nbhyp]);
@@ -117,21 +119,16 @@ def ordinarykrig (KrigInfo,**kwargs):
         # MULTI OBJECTIVE
         KrigInfo["multiobj"] = True
         KrigInfo["num"] = num
-        KrigInfo["y"] = [0]*(num+1)
-        KrigInfo["Theta"] = [0] * (num + 1)
-        KrigInfo["U"] = [0] * (num + 1)
-        KrigInfo["Psi"] = [0] * (num + 1)
-        KrigInfo["BE"] = [0] * (num + 1)
-        KrigInfo["y_mean"] = [0] * (num + 1)
-        KrigInfo["y_std"] = [0] * (num + 1)
-        KrigInfo["y_norm"] = [0] * (num + 1)
-        KrigInfo["SigmaSqr"] = [0] * (num + 1)
-        KrigInfo["y"][num]= Y[:,num]
 
+        # KrigInfo["y"][num]= np.transpose(np.array([Y[:,num]]))
+
+        # Create regression matrix
+        KrigInfo["idx"][num] = polytruncation(KrigInfo["TrendOrder"], KrigInfo["nvar"], 1)
         # Standardize X and y
         if standardization == True:
             if standtype.lower()=="default":
                 KrigInfo["normtype"] = "default"
+                bound = np.vstack((- np.ones(shape=[1, KrigInfo["nvar"]]), np.ones(shape=[1, KrigInfo["nvar"]])))
                 if normy == True:
                     KrigInfo["X_norm"], KrigInfo["y_norm"][num] = standardize(X, Y, type=standtype.lower(), normy=True, range=np.vstack((KrigInfo["lb"],KrigInfo["ub"])))
                     KrigInfo["norm_y"] = True
@@ -151,18 +148,44 @@ def ordinarykrig (KrigInfo,**kwargs):
         else:
             KrigInfo["standardization"] = False
             KrigInfo["norm_y"] = False
+        KrigInfo["F"][num] = compute_regression_mat(KrigInfo["idx"][num], KrigInfo["X_norm"], bound, np.ones(shape=[KrigInfo["nvar"]]))
 
-        print("Multi Objective, train hyperparam, begin.")
+        if disp == True:
+            print("Multi Objective, train hyperparam, begin.")
 
         # Find optimum value of Theta
+        if KrigInfo["nrestart"] <=1:
+            xhyp = nbhyp*[0]
+        else:
+            _,xhyp = sampling('sobol',nbhyp,KrigInfo['nrestart'],result="real",upbound=ubhyp,lobound=lbhyp)
+
+        bestxcand = np.zeros(shape=[KrigInfo['nrestart'], nbhyp])
+        neglnlikecand = np.zeros(shape=[KrigInfo['nrestart']])
         if nbhyp <= 1:
             res = minimize_scalar(likelihood.likelihood, bounds=(lbvalue, ubvalue), method='golden')
             best_x = np.array([res.x])
         else:
-            best_x, es = cma.fmin2(likelihood.likelihood, nbhyp * [0], sigmacmaes,args=(KrigInfo,),options={'scaling_of_variables': scaling})
+            lbfgsbbound = np.transpose(np.vstack((lbhyp,ubhyp)))
+            if disp == True:
+                print("Hyperparam training is repeated for ",KrigInfo['nrestart']," time(s)")
+            for ii in range(0,KrigInfo['nrestart']):
+                if disp == True:
+                    print("hyperparam training attempt number ",ii+1)
+                # bestxcand[ii, :], es = cma.fmin2(likelihood.likelihood,xhyp[ii,:],sigmacmaes,{'BoundaryHandler': cma.BoundPenalty,'bounds': [lbhyp.tolist(), ubhyp.tolist()],'scaling_of_variables':scaling,'verb_disp': 0, 'verbose':-9},args=(KrigInfo,num))
+                # neglnlikecand[ii] = es.result[1]
+                res = minimize(likelihood.likelihood, xhyp[ii, :], method='L-BFGS-B', bounds=lbfgsbbound, args=(KrigInfo, num))
+                bestxcand[ii, :] = res.x
+                neglnlikecand[ii] = res.fun
+                if disp == True:
+                    print(" ")
+            I = np.argmin(neglnlikecand)
+            best_x = bestxcand[I, :]
 
         KrigInfo["Theta"][num] = best_x
-        print("Multi Objective, train hyperparam, end.")
+        if disp == True:
+            print("Multi Objective, train hyperparam, end.")
+            print("Best hyperparameter is ", best_x)
+            print("With NegLnLikelihood of ", neglnlikecand[I])
         KrigInfo= likelihood.likelihood(best_x,KrigInfo,retresult="all",num=num)
         U = KrigInfo["U"][num]
         Psi = KrigInfo["U"][num]
@@ -179,10 +202,10 @@ def ordinarykrig (KrigInfo,**kwargs):
                 KrigInfo["normtype"] = "default"
                 bound = np.vstack((- np.ones(shape=[1, KrigInfo["nvar"]]), np.ones(shape=[1, KrigInfo["nvar"]])))
                 if normy == True:
-                    KrigInfo["X_norm"], KrigInfo["y_norm"] = standardize(X, Y, type=standtype.lower(), normy=True, range=np.vstack((KrigInfo["lb"],KrigInfo["ub"])))
+                    KrigInfo["X_norm"], KrigInfo["y_norm"] = standardize(X, Y, type=standtype.lower(), normy=True, range=np.vstack((KrigInfo["lb"][num],KrigInfo["ub"][num])))
                     KrigInfo["norm_y"] = True
                 else:
-                    KrigInfo["X_norm"] = standardize(X, Y, type=standtype.lower(), range=np.vstack((KrigInfo["lb"],KrigInfo["ub"])))
+                    KrigInfo["X_norm"] = standardize(X, Y, type=standtype.lower(), range=np.vstack((KrigInfo["lb"][num],KrigInfo["ub"][num])))
                     KrigInfo["norm_y"] = False
             else:
                 KrigInfo["normtype"] = "std"
@@ -199,7 +222,8 @@ def ordinarykrig (KrigInfo,**kwargs):
             KrigInfo["norm_y"] = False
         KrigInfo["F"] = compute_regression_mat(KrigInfo["idx"],KrigInfo["X_norm"],bound,np.ones(shape=[KrigInfo["nvar"]]))
 
-        print("Single Objective, train hyperparam, begin.")
+        if disp == True:
+            print("Single Objective, train hyperparam, begin.")
 
         # Find optimum value of Theta
         if KrigInfo["nrestart"] <=1:
@@ -213,18 +237,22 @@ def ordinarykrig (KrigInfo,**kwargs):
             res = minimize_scalar(likelihood.likelihood, bounds=(lbvalue, ubvalue), method='golden')
             best_x = np.array([res.x])
         else:
-            print("Hyperparam training is repeated for ",KrigInfo['nrestart']," time(s)")
+            if disp == True:
+                print("Hyperparam training is repeated for ",KrigInfo['nrestart']," time(s)")
             for ii in range(0,KrigInfo['nrestart']):
-                print("hyperparam training attempt number ",ii+1)
-                bestxcand[ii, :], es = cma.fmin2(likelihood.likelihood,xhyp[ii,:],sigmacmaes,{'BoundaryHandler': cma.BoundPenalty,'bounds': [lbhyp.tolist(), ubhyp.tolist()],'scaling_of_variables':scaling},args=(KrigInfo,))
+                if disp == True:
+                    print("hyperparam training attempt number ",ii+1)
+                bestxcand[ii, :], es = cma.fmin2(likelihood.likelihood,xhyp[ii,:],sigmacmaes,{'bounds': [lbhyp.tolist(), ubhyp.tolist()],'scaling_of_variables':scaling,'verb_disp': 0, 'verbose':-9},args=(KrigInfo,))
                 neglnlikecand[ii] = es.result[1]
-                print(" ")
+                if disp == True:
+                    print(" ")
             I = np.argmin(neglnlikecand)
             best_x = bestxcand[I, :]
 
-        print("Single Objective, train hyperparam, end.")
-        print("Best hyperparameter is ", best_x)
-        print("With NegLnLikelihood of ", neglnlikecand[I])
+        if disp == True:
+            print("Single Objective, train hyperparam, end.")
+            print("Best hyperparameter is ", best_x)
+            print("With NegLnLikelihood of ", neglnlikecand[I])
         KrigInfo= likelihood.likelihood(best_x,KrigInfo,retresult="all")
         U = KrigInfo["U"]
         Psi = KrigInfo["Psi"]

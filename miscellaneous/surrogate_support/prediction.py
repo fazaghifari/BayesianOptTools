@@ -3,7 +3,7 @@ from numpy.linalg import solve as mldivide
 from miscellaneous.surrogate_support.kernel import calckernel
 from miscellaneous.sampling.samplingplan import standardize
 from miscellaneous.surrogate_support.trendfunction import compute_regression_mat
-from math import erf
+from scipy.special import erf
 
 def prediction (x,KrigInfo,predtype,**kwargs):
     """
@@ -47,12 +47,15 @@ def prediction (x,KrigInfo,predtype,**kwargs):
     nvar = KrigInfo["nvar"]
     kernel = KrigInfo["kernel"]
     nkernel = KrigInfo["nkernel"]
-    wgkf = KrigInfo["wgkf"]
-    idx = KrigInfo["idx"]
     p = 2  # from reference
+    realmin = np.finfo(float).tiny
 
-    if KrigInfo["multiobj"] == True:
-        num = KrigInfo["num"]
+
+    if x.ndim == 1:
+        x =np.array([x])
+    if KrigInfo["multiobj"] == True and "num" in KrigInfo and "wgkf" in KrigInfo and "idx" in KrigInfo:
+        wgkf = KrigInfo["wgkf"][num]
+        idx = KrigInfo["idx"][num]
 
     if num == None:
         if KrigInfo["standardization"] == False:
@@ -68,15 +71,17 @@ def prediction (x,KrigInfo,predtype,**kwargs):
         U = KrigInfo["U"]
         PHI = KrigInfo["F"]
         BE = KrigInfo["BE"]
+        wgkf = KrigInfo["wgkf"]
+        idx = KrigInfo["idx"]
         SigmaSqr = KrigInfo["SigmaSqr"]
         if KrigInfo["type"].lower() == "kpls":
             plscoeff = KrigInfo["plscoeff"]
     else:
         if KrigInfo["standardization"] == False:
-            X = KrigInfo["X"][num]
+            X = KrigInfo["X"]
             y = KrigInfo["y"][num]
         else:
-            X = KrigInfo["X_norm"][num]
+            X = KrigInfo["X_norm"]
             if "y_norm" in KrigInfo:
                 y = KrigInfo["y_norm"][num]
             else:
@@ -91,10 +96,18 @@ def prediction (x,KrigInfo,predtype,**kwargs):
 
     if KrigInfo["standardization"] == True:
         if KrigInfo["normtype"] == "default":
-            x = standardize(x, 0, type=KrigInfo["normtype"], range=np.vstack((KrigInfo["lb"],KrigInfo["ub"])))
+            if num == None:
+                x = standardize(x, 0, type=KrigInfo["normtype"], range=np.vstack((KrigInfo["lb"],KrigInfo["ub"])))
+            else:
+                x = standardize(x, 0, type=KrigInfo["normtype"], range=np.vstack((KrigInfo["lb"], KrigInfo["ub"])))
         elif KrigInfo["normtype"] == "std":
             x = (x - KrigInfo["X_mean"]) / KrigInfo["X_std"]
 
+    if type(predtype) is not list:
+        npredtype = 1
+        predtype = [predtype]
+    else:
+        npredtype = len(predtype)
 
     #Calculate number of sample points
     n = np.ma.size(X, axis=0)
@@ -107,7 +120,7 @@ def prediction (x,KrigInfo,predtype,**kwargs):
 
     #initialise psi to vector ones
     psi = np.ones((n,1),float)
-    PsiComp = np.zeros(shape=[n, npred, nvar])
+    PsiComp = np.zeros(shape=[n, npred, nkernel])
 
     #fill psi vector
     if KrigInfo["type"].lower() == "kriging":
@@ -140,30 +153,43 @@ def prediction (x,KrigInfo,predtype,**kwargs):
     s = (abs(SSqr))**0.5
 
     #Switch prediction type
-    if predtype.lower() == "pred":
-        output = f
-    elif predtype.lower() == "ssqr":
-        output = SSqr
-    elif predtype.lower() == "fpc":
-        output = fpc
-    elif predtype.lower() == "lcb":
-        output = f - np.dot(KrigInfo["sigmalcb"],SSqr)
-    elif predtype.lower() == "ebe":
-        output = -SSqr
-    elif predtype.lower() == "ei":
-        yBest = np.min(y)
-        if SSqr == 0:
-            ExpImp = 0
-        else:
-            EITermOne = (yBest - f) * (0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((yBest - f) / s)))
-            EITermTwo = s * (1 / np.sqrt(2 * np.pi)) * np.exp(-(1 / 2) * (((yBest - f) ** 2) / SSqr))
-            ExpImp = np.log10(EITermOne + EITermTwo + 1e-10)
-        output = -ExpImp
-    elif predtype.lower() == "poi":
-        ProbImp = 0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((np.min(y) - f) / s))
-        output = -ProbImp
-    elif predtype.lower() == "pof":
-        ProbFeas = 0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((KrigInfo["limit"] - (-f)) / s))
-        output = ProbFeas
+    outputtotal = ()
+    for predtype1 in predtype:
+        if predtype1.lower() == "pred":
+            output = f
+        elif predtype1.lower() == "ssqr":
+            output = SSqr
+        elif predtype1.lower() == "fpc":
+            output = fpc
+        elif predtype1.lower() == "lcb":
+            output = f - np.dot(KrigInfo["sigmalcb"],SSqr)
+        elif predtype1.lower() == "ebe":
+            output = -SSqr
+        elif predtype1.lower() == "ei":
+            yBest = np.min(y)
+            if SSqr.all() == 0:
+                ExpImp = 0
+            else:
+                EITermOne = (yBest - f) * (0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((yBest - f) / np.transpose(s) )))
+                EITermTwo = np.transpose(s) * (1 / np.sqrt(2 * np.pi)) * np.exp(-(1 / 2) * (((yBest - f) ** 2) / np.transpose(SSqr) ))
+                # give penalty for CMA-ES optimizer, if both term produce 0. Otherwise, in certain condition it may leads to error in CMA-ES
+                if EITermOne.all() == 0 and EITermTwo.all() == 0:
+                    ExpImp = np.array([[np.random.uniform(np.finfo("float").tiny, np.finfo("float").tiny * 100)]])
+                else:
+                    ExpImp = (EITermOne + EITermTwo + realmin)
+            output = -ExpImp
+        elif predtype1.lower() == "poi":
+            ProbImp = 0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((np.min(y) - f) / np.transpose(s) ))
+            output = -ProbImp
+        elif predtype1.lower() == "pof":
+            ProbFeas = 0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((KrigInfo["limit"] - (-f)) / np.transpose(s) ))
+            output = ProbFeas
+        outputtotal = outputtotal+(output,)
 
-    return output
+    if npredtype == 1:
+        if np.size(output) == 1:
+            return output[0,0]
+        else:
+            return output
+    else:
+        return outputtotal

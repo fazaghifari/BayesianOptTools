@@ -5,6 +5,7 @@ Subroutines:
 
 """
 import numpy as np
+import numpy.matlib
 import globvar
 from miscellaneous.sampling.haltonsampling import halton
 from miscellaneous.sampling.rlh import rlh
@@ -99,3 +100,50 @@ def standardize(X,y,**kwargs):
 
             X_norm = (X - X_mean) / X_std
             return X_norm, X_mean, X_std
+
+def scale(inst,strategy=0,**kwargs):
+    """
+    =========================================================================
+    scale : scale data to [0 1] or N(0,1)
+    -------------------------------------------------------------------------
+    input
+      inst    [m x n] : learning data
+       strategy[1 x 1] : 0-sacle to [0 1]
+                         1-scale to N(0,1)
+       range   [2 x n] : first row  : the minimum of each column
+                         second row : the maximum of each column
+    -------------------------------------------------------------------------
+    ouput
+       scale_inst : scaling learning data
+       range      : the same with input
+    =========================================================================
+    """
+    range = kwargs.get('range',np.array([None]))
+    n = np.size(inst[:,0],0)
+    if strategy == 0:
+        if range.any() == None:
+            Max = np.matlib.repmat(np.max(inst,0),n,1)
+            Min = np.matlib.repmat(np.min(inst,0),n,1)
+            range = np.vstack((Min[0,:],Max[0,:]))
+        else:
+            Max = np.matlib.repmat(range[1,:],n,1)
+            Min = np.matlib.repmat(range[0,:],n,1)
+        M_m = Max-Min
+        Temp = np.where(M_m[0,:] == 0)
+        if Temp:
+            M_m[:,Temp] = inst[:,Temp]
+            if M_m[0,Temp] == 0:
+                M_m[:,Temp] = 1
+        scale_inst = (inst-Min)/M_m
+    else:
+        if range.any() == None:
+            inst_c = np.mean(inst,0)
+            inst_s = np.std(inst,0)
+            range = np.vstack((inst_c,inst_s))
+        else:
+            inst_c = range[0,:]
+            inst_s = range[1,:]
+        scale_inst = inst - np.ones(shape=[n,1])*inst_c
+        scale_inst = scale_inst*np.diag(1/inst_s)
+
+    return (scale_inst, range)

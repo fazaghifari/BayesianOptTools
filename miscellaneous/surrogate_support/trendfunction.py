@@ -67,7 +67,7 @@ def MonCof(d,n):
     x = np.transpose(np.diff(tempreshape,1,0))
     return x
 
-def compute_regression_mat(idx,X,bounds,polytype):
+def compute_regression_mat(idx,X,bounds,polytype,**kwargs):
     """
     Create regression matrix using polynomial chaos expansion for Kriging
 
