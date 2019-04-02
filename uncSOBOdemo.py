@@ -1,7 +1,7 @@
 from miscellaneous.surrogate_support.trendfunction import polytruncation,compute_regression_mat,legendre
 import numpy as np
 from testcase.analyticalfcn.cases import evaluate
-from surrogate_models.kriging import ordinarykrig,kpls
+from surrogate_models.kriging import kriging,kpls
 from miscellaneous.surrogate_support.initinfo import initkriginfo
 from miscellaneous.sampling.samplingplan import sampling,realval,standardize
 from testcase.analyticalfcn.cases import evaluate,branin
@@ -47,7 +47,7 @@ BayesInfo["acquifuncopt"] = "cmaes"
 
 #Run Kriging
 t = time.time()
-MyKrig = ordinarykrig(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
+MyKrig = kriging(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
 elapsed = time.time() - t
 print("elapsed time for train Kriging model: ", elapsed,"s")
 

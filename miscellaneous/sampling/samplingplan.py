@@ -6,7 +6,6 @@ Subroutines:
 """
 import numpy as np
 import numpy.matlib
-import globvar
 from miscellaneous.sampling.haltonsampling import halton
 from miscellaneous.sampling.rlh import rlh
 from miscellaneous.sampling.sobol_seq import i4_sobol_generate

@@ -135,7 +135,7 @@ def prediction (x,KrigInfo,predtype,**kwargs):
             psi[i] = np.exp(-1 * np.sum(theta * np.dot(((X[i, :] - x) ** p), (plscoeff ** p))))
 
     #calculate prediction
-    f = fpc + np.dot(np.transpose(psi), mldivide(U,mldivide(np.transpose(U),(y - PHI*BE))))
+    f = fpc + np.dot(np.transpose(psi), mldivide(U,mldivide(np.transpose(U),(y - np.dot(PHI,BE) ))))
     if num == None:
         if KrigInfo["norm_y"] == True:
             f = (KrigInfo["y_mean"] + KrigInfo["y_std"]*f)
@@ -149,6 +149,8 @@ def prediction (x,KrigInfo,predtype,**kwargs):
     term1 = (1 - np.sum(np.transpose(psi)*np.transpose(dummy1),1))
     ux = (np.dot(np.transpose(PHI),dummy1))-np.transpose(PC)
     term2 = ux*(mldivide(np.dot(np.transpose(PHI),dummy2),ux))
+    tempterm1 = np.transpose(np.array([term1]))
+    newterm1 = np.matlib.repmat(tempterm1,1,np.size(term2,0))
     SSqr = np.dot(SigmaSqr,(term1+term2))
     s = (abs(SSqr))**0.5
 

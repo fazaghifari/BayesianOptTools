@@ -1,5 +1,4 @@
 import numpy as np
-import globvar
 from copy import deepcopy
 from optim_tools.GAv1 import uncGA
 from miscellaneous.surrogate_support import likelihood
@@ -12,7 +11,7 @@ from miscellaneous.surrogate_support.trendfunction import polytruncation, comput
 from scipy.optimize import minimize
 import cma
 
-def ordinarykrig (KrigInfo,**kwargs):
+def kriging (KrigInfo,**kwargs):
     """
     Create Kriging model based on the information from inputs and global variables.
     Inputs:
@@ -52,7 +51,7 @@ def ordinarykrig (KrigInfo,**kwargs):
         KrigInfo['nrestart'] = 1
 
     #Polynomial Order
-    if "TrendOrder " not in KrigInfo:
+    if "TrendOrder" not in KrigInfo:
         KrigInfo["TrendOrder"] = 0
     elif KrigInfo["TrendOrder"] < 0:
         raise ValueError("The order of the polynomial trend should be a positive value.")
@@ -261,6 +260,8 @@ def ordinarykrig (KrigInfo,**kwargs):
 
 
 def kpls (X,Y,**kwargs):
+    import globvar
+
     globvar.type = "kpls"
     globvar.X = X
     globvar.y = Y

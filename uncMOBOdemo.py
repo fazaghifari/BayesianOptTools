@@ -1,7 +1,7 @@
 from miscellaneous.surrogate_support.trendfunction import polytruncation,compute_regression_mat,legendre
 import numpy as np
 from testcase.analyticalfcn.cases import evaluate
-from surrogate_models.kriging import ordinarykrig,kpls
+from surrogate_models.kriging import kriging,kpls
 from miscellaneous.surrogate_support.initinfo import initkriginfo
 from miscellaneous.sampling.samplingplan import sampling,realval,standardize
 from testcase.analyticalfcn.cases import schaffer,evaluate
@@ -48,7 +48,7 @@ BayesMultiInfo["acquifuncopt"] = "fmincon"
 #Create Kriging
 myKrig = [0]*2
 for kk in range(0,2):
-    myKrig[kk] = ordinarykrig(KrigMultiInfo,standardization=True,normtype="default",normalize_y=False,disp=True,num=kk)
+    myKrig[kk] = kriging(KrigMultiInfo,standardization=True,normtype="default",normalize_y=False,disp=True,num=kk)
 
 #Run Bayesian Optimization
 xbest, ybest, KrigNewMultiInfo = mobounc(BayesMultiInfo,KrigMultiInfo)

@@ -143,30 +143,32 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         temp1  = (mldivide(U,temp11)) #just a temporary variable for debugging
         temp21 = mldivide(np.transpose(U),F) #just a temporary variable for debugging
         temp2  = (mldivide(U,temp21)) #just a temporary variable for debugging
-        tempmu     = np.dot(np.transpose(F),temp1)/np.dot(np.transpose(F),temp2)
-        BE = tempmu[0,0]
+        tempmu     = mldivide(np.dot(np.transpose(F),temp2),np.dot(np.transpose(F),temp1))#np.dot(np.transpose(F),temp1)/np.dot(np.transpose(F),temp2)
+        BE = tempmu
 
         # Use back-substitution of Cholesky instead of inverse
-        temp31 = mldivide(np.transpose(U),(y-F*BE)) #just a temporary variable for debugging
+        temp31 = mldivide(np.transpose(U),(y - np.dot(F,BE) )) #just a temporary variable for debugging
         temp3  = mldivide(U,temp31) #just a temporary variable for debugging
-        SigmaSqr = (np.dot(np.transpose(y - F * BE),(temp3)))/n
+        SigmaSqr = (np.dot(np.transpose(y - np.dot(F,BE)),(temp3)))/n
 
         tempNegLnLike    = -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
         NegLnLike = tempNegLnLike[0,0]
     except:
         NegLnLike = 10000
         print("Matrix is ill-conditioned, penalty is used on NegLnLike value")
+        print("Are you sure want to continue?")
+        input("Press Enter to continue...")
 
     if num == None:
         KrigInfo["U"] = U
         KrigInfo["Psi"] = Psi
         KrigInfo["BE"] = BE
-        KrigInfo["SigmaSqr"] = SigmaSqr
+        KrigInfo["SigmaSqr"] = SigmaSqr[0,0]
     else:
         KrigInfo["U"][num] = np.array(U)
         KrigInfo["Psi"][num] = np.array(Psi)
         KrigInfo["BE"][num] = np.array(BE)
-        KrigInfo["SigmaSqr"][num] = SigmaSqr
+        KrigInfo["SigmaSqr"][num] = SigmaSqr[0,0]
 
     if mode.lower() == "default":
         return NegLnLike

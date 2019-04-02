@@ -2,7 +2,7 @@ import numpy as np
 from copy import deepcopy
 from optim_tools.acquifun_opt import run_acquifun_opt, run_multi_acquifun_opt
 from optim_tools.parego import paregopre
-from surrogate_models.kriging import ordinarykrig
+from surrogate_models.kriging import kriging
 from miscellaneous.surrogate_support.prediction import prediction
 from testcase.analyticalfcn.cases import evaluate
 from miscellaneous.surrogate_support.initinfo import initkriginfo,copymultiKrigInfo
@@ -93,7 +93,7 @@ def sobounc(BayesInfo,KrigInfoBayes):
         KrigNewInfo["X"] = np.vstack((KrigNewInfo["X"],xnext))
         KrigNewInfo["y"] = np.vstack((KrigNewInfo["y"],ynext))
         #Re-Create Kriging model
-        KrigNewInfo = ordinarykrig(KrigNewInfo,standardization=True)
+        KrigNewInfo = kriging(KrigNewInfo,standardization=True)
 
         nup = nup+1
         yhist = np.vstack((yhist,np.min(KrigNewInfo["y"])))
@@ -195,7 +195,7 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
     if BayesMultiInfo["krignum"] == 1:
         KrigScalarizedInfo = copymultiKrigInfo(KrigInfoBayesMulti,0)
         KrigScalarizedInfo["y"] = paregopre(yall)
-        KrigScalarizedInfo = ordinarykrig(KrigScalarizedInfo, standardization=True)
+        KrigScalarizedInfo = kriging(KrigScalarizedInfo, standardization=True)
 
     while nup <= BayesMultiInfo["nup"]:
 
@@ -218,7 +218,7 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
         if math.isnan(ynext.any()) == True:
             for jj in range(0,len(KrigInfoBayesMulti["y"])):
                 if BayesMultiInfo.krignum == 1:
-                    KrigNewMultiInfo = ordinarykrig(KrigNewMultiInfo,standardization=True,num=jj)
+                    KrigNewMultiInfo = kriging(KrigNewMultiInfo,standardization=True,num=jj)
                 SSqr, y_hat = prediction(xnext, KrigNewMultiInfo, ["SSqr", "pred"],num=jj)
                 ynext[0,jj] = y_hat + SSqr
 
@@ -228,7 +228,7 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
             KrigNewMultiInfo["y"][jj] = np.vstack((KrigNewMultiInfo["y"][jj],ynext[jj]))
             # Re-create Kriging models if multiple Kriging methods are used.
             if BayesMultiInfo["krignum"] > 1:
-                KrigNewMultiInfo = ordinarykrig(KrigNewMultiInfo,standardization=True,num=jj)
+                KrigNewMultiInfo = kriging(KrigNewMultiInfo,standardization=True,num=jj)
 
         yall = np.vstack((yall,ynext))
         Xall = np.vstack((Xall,xnext))
@@ -238,7 +238,7 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
         if BayesMultiInfo["krignum"] == 1:
             KrigScalarizedInfo["X"] = np.vstack((KrigScalarizedInfo["X"],xnext))
             KrigScalarizedInfo["y"] = paregopre(yall)
-            KrigScalarizedInfo = ordinarykrig(KrigScalarizedInfo,standardization=True)
+            KrigScalarizedInfo = kriging(KrigScalarizedInfo,standardization=True)
 
         nup = nup+1 # Update the number of iterations
         # Show the optimization progress.
@@ -253,7 +253,7 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
     if BayesMultiInfo["krignum"] == 1:
         print("ParEGO finished. Now retraining the Kriging models for each individual models.")
         for jj in range (0, len(KrigInfoBayesMulti["y"])):
-            KrigNewMultiInfo = ordinarykrig(KrigNewMultiInfo, standardization=True, num=jj)
+            KrigNewMultiInfo = kriging(KrigNewMultiInfo, standardization=True, num=jj)
 
     print("Optimization finished, now creating the final outputs.")
 
