@@ -22,9 +22,9 @@ BayesianOptTools depends on these modules: numpy, scipy, sk-learn and CMA-ES.
 
 # Quick Examples
 The demo codes are available in the main folder. 
-KrigDemo.py is a demo script for creating surrogate model for Branin test function.
-uncMOBOdemo.py is a demo script for performing unconstrained multi-objective optimization for Schaffer test function.
-uncSOBOdemo.py is a demo script for performing unconstrained single objective optimization for Branin test function.
+* KrigDemo.py is a demo script for creating surrogate model for Branin test function.
+* uncMOBOdemo.py is a demo script for performing unconstrained multi-objective optimization for Schaffer test function.
+* uncSOBOdemo.py is a demo script for performing unconstrained single objective optimization for Branin test function.
 
 # Contact
 The original program was written by Pramudita Satria Palar, Kemas Zakaria, Ghifari Adam Faza, and is maintained by Aerodynamics Research Group ITB. 
