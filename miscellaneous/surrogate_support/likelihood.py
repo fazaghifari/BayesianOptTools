@@ -65,6 +65,11 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         if KrigInfo["type"].lower() == "kpls":
             plscoeff = KrigInfo["plscoeff"][num]
 
+    if type(x) is float or type(x) is int:
+        x = np.array([x])
+    if "n_princomp" in KrigInfo:
+        nvar = KrigInfo["n_princomp"]
+
     if len(x) == nvar: # Nugget is not tunable, single kernel
         nugget = KrigInfo["nugget"]
         eps = 10. ** nugget
@@ -112,10 +117,11 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         Psi = np.sum(PsiComp,2)
 
     elif KrigInfo["type"].lower() == "kpls":
-        for i in range (0,n):
-            for j in range (i+1,n):
-                Psi[i,j] = np.exp(-1*np.sum(theta* np.dot( ((X[i,:] - X[j,:])**p) , (plscoeff**p) )))
-        pass
+        nvar = KrigInfo["nvar"]
+        for ii in range(0,nkernel):
+            PsiComp[:,:,ii] = wgkf[ii]*calckernel(X,X,theta,nvar,type=kernel[ii],plscoeff=plscoeff)
+        Psi = np.sum(PsiComp,2)
+
 
     #Add upper and lower halves and diagonal of ones plus
     #small number to reduce ill-conditioning

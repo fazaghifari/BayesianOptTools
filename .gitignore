@@ -4,7 +4,7 @@
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
-__pycache__/
+__pycache__
 *.py[cod]
 *$py.class
 .idea/
@@ -134,3 +134,4 @@ outcmaesxmean.dat
 outcmaesxrecentbest.dat
 testing.py
 temporarydata.mat
+*.pyc

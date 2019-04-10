@@ -76,6 +76,7 @@ def prediction (x,KrigInfo,predtype,**kwargs):
         SigmaSqr = KrigInfo["SigmaSqr"]
         if KrigInfo["type"].lower() == "kpls":
             plscoeff = KrigInfo["plscoeff"]
+
     else:
         if KrigInfo["standardization"] == False:
             X = KrigInfo["X"]
@@ -93,6 +94,11 @@ def prediction (x,KrigInfo,predtype,**kwargs):
         SigmaSqr = KrigInfo["SigmaSqr"][num]
         if KrigInfo["type"].lower() == "kpls":
             plscoeff = KrigInfo["plscoeff"][num]
+
+    if type(x) is float or type(x) is int:
+        x = np.array([x])
+    if "n_princomp" in KrigInfo:
+        nvar = KrigInfo["n_princomp"]
 
     if KrigInfo["standardization"] == True:
         if KrigInfo["normtype"] == "default":
@@ -131,8 +137,13 @@ def prediction (x,KrigInfo,predtype,**kwargs):
         #     psi[i]= np.exp(-1*np.sum(theta*abs(X[i,:]-x)**p))
 
     elif KrigInfo["type"].lower() == "kpls":
-        for i in range(0, n):
-            psi[i] = np.exp(-1 * np.sum(theta * np.dot(((X[i, :] - x) ** p), (plscoeff ** p))))
+        nvar = KrigInfo["nvar"]
+        for ii in range(0, nkernel):
+            PsiComp[:, :, ii] = wgkf[ii] * calckernel(X, x, theta, nvar, type=kernel[ii], plscoeff=plscoeff)
+        psi = np.sum(PsiComp, 2)
+
+        # for i in range(0, n):
+        #     psi[i] = np.exp(-1 * np.sum(theta * np.dot(((X[i, :] - x) ** p), (plscoeff ** p))))
 
     #calculate prediction
     f = fpc + np.dot(np.transpose(psi), mldivide(U,mldivide(np.transpose(U),(y - np.dot(PHI,BE) ))))

@@ -43,7 +43,7 @@ KrigInfo["nugget"] = -6
 
 #Run Kriging
 t = time.time()
-myKrig = kriging(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
+myKrig = kpls(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
 elapsed = time.time() - t
 print("elapsed time for train Kriging model: ", elapsed,"s")
 

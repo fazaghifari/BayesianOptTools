@@ -39,7 +39,7 @@ def initkriginfo(type,objective=1):
             KrigInfo["lb"] = [0]
             KrigInfo["kernel"] = "gaussian"
             KrigInfo["nugget"] = -6
-            keys = ["Theta", "U", "Psi", "BE", "y_mean", "y_std", "SigmaSqr", "idx", "F", "wgkf"]
+            keys = ["Theta", "U", "Psi", "BE", "y_mean", "y_std", "SigmaSqr", "idx", "F", "wgkf", "plscoeff"]
             for key in keys:
                 KrigInfo[key] = [0]
 
@@ -54,7 +54,7 @@ def initkriginfo(type,objective=1):
             KrigInfo["nugget"] = -6
             KrigInfo["multiobj"] = True
             KrigInfo["standardization"] = True
-            keys = ["y","Theta", "U", "Psi", "BE", "y_mean", "y_std", "SigmaSqr", "idx", "F", "wgkf","lb","ub"]
+            keys = ["y","Theta", "U", "Psi", "BE", "y_mean", "y_std", "SigmaSqr", "idx", "F", "wgkf","lb","ub", "plscoeff"]
             for key in keys:
                 KrigInfo[key] = [0]*objective
 
@@ -84,7 +84,7 @@ def copymultiKrigInfo(KrigMultiInfo,num):
     KrigNewInfo["lb"] = KrigMultiInfo["lb"]
     KrigNewInfo["kernel"] = KrigMultiInfo["kernel"]
     KrigNewInfo["nugget"] = KrigMultiInfo["nugget"]
-    keys = ["Theta", "U", "Psi", "BE", "y_mean", "y_std", "SigmaSqr", "idx", "F", "wgkf"]
+    keys = ["Theta", "U", "Psi", "BE", "y_mean", "y_std", "SigmaSqr", "idx", "F", "wgkf", "plscoeff"]
     for key in keys:
         KrigNewInfo[key] = KrigMultiInfo[key][num]
 
