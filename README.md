@@ -16,3 +16,12 @@ Currently, the program is under development and not yet implemented as a module 
   * Sasena (Single-Objective)
   * Styblinski-Tang (Single-Objective)
   * Schaffer (Multi-Objective)
+  
+# Required packages
+BayesianOptTools depends on these modules: numpy, scipy, sk-learn and CMA-ES.
+
+# Usage
+The demo codes are available in the main folder.
+
+# Contact
+The original program was written by Pramudita Satria Palar, Kemas Zakaria, Ghifari Adam Faza, and is maintained by Aerodynamics Research Group ITB. 
