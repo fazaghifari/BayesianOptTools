@@ -30,3 +30,5 @@ The demo codes are available in the main folder.
 
 # Contact
 The original program was written by Pramudita Satria Palar, Kemas Zakaria, Ghifari Adam Faza, and is maintained by Aerodynamics Research Group ITB. 
+
+e-mail: pramsp@ftmd.itb.ac.id
