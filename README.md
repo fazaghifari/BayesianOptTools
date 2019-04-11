@@ -19,6 +19,7 @@ Currently, the program is under development and not implemented yet as a module 
   
 # Required packages
 BayesianOptTools depends on these modules: numpy, scipy, sk-learn and pycma.
+
 pycma module can be obtained here: https://github.com/CMA-ES/pycma
 
 # Quick Examples
