@@ -18,7 +18,8 @@ Currently, the program is under development and not implemented yet as a module 
   * Schaffer (Multi-Objective)
   
 # Required packages
-BayesianOptTools depends on these modules: numpy, scipy, sk-learn and CMA-ES.
+BayesianOptTools depends on these modules: numpy, scipy, sk-learn and pycma.
+pycma module can be obtained here: https://github.com/CMA-ES/pycma
 
 # Quick Examples
 The demo codes are available in the main folder. 

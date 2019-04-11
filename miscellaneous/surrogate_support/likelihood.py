@@ -1,28 +1,3 @@
-# [NegLnLike,Psi,U]=likelihood(x)
-# Calculates the negative of the concentrated ln-likelihood
-# Inputs:
-# x - vector of log(theta) parameters
-# Global variables used:
-# ModelInfo.X - n x k matrix of sample locations
-# ModelInfo.y - n x 1 vector of observed data
-# Outputs:
-# NegLnLike - concentrated log-likelihood *-1 for minimising
-# Psi - correlation matrix
-# U - Choleski factorisation of correlation matrix
-# Copyright 2007 A I J Forrester
-# This program is free software: you can redistribute it and/or modify  it
-# under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or any
-# later version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
-# General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License and GNU
-# Lesser General Public License along with this program. If not, see
-# <http://www.gnu.org/licenses/>.
 import numpy as np
 from numpy.linalg import solve as mldivide
 import cma.evolution_strategy as cmaes
@@ -30,6 +5,36 @@ from miscellaneous.surrogate_support.kernel import calckernel
 from miscellaneous.surrogate_support.hyp_trf import rescale
 
 def likelihood (x,KrigInfo,num=None,**kwargs):
+    """
+    [NegLnLike,Psi,U]=likelihood(x)
+    Calculates the negative of the concentrated ln-likelihood
+
+    Inputs:
+    x - vector of log(theta) parameters
+    Global variables used:
+    ModelInfo.X - n x k matrix of sample locations
+    ModelInfo.y - n x 1 vector of observed data
+
+    Outputs:
+    NegLnLike - concentrated log-likelihood *-1 for minimising
+    Psi - correlation matrix
+    U - Choleski factorisation of correlation matrix
+
+    Copyright 2007 A I J Forrester
+    This program is free software: you can redistribute it and/or modify  it
+    under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or any
+    later version.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License and GNU
+    Lesser General Public License along with this program. If not, see
+    <http://www.gnu.org/licenses/>.
+    """
     mode = kwargs.get('retresult', "default")
     nvar = KrigInfo["nvar"]
     F = KrigInfo["F"]
