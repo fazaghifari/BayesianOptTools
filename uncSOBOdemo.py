@@ -12,7 +12,7 @@ import time
 #Initialization
 KrigInfo = dict()
 BayesInfo = dict()
-kernel = ["gaussian","matern32"]
+kernel = ["gaussian"]
 # Sampling
 nsample = 10
 nvar = 2
@@ -47,11 +47,11 @@ BayesInfo["acquifuncopt"] = "cmaes"
 
 #Run Kriging
 t = time.time()
-MyKrig = kriging(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
+MyKrig = kpls(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
 elapsed = time.time() - t
 print("elapsed time for train Kriging model: ", elapsed,"s")
 
 #Run Bayesian Opt
-xbest,ybest,yhist,KrigNewInfo = sobounc(BayesInfo,MyKrig)
+xbest,ybest,yhist,KrigNewInfo = sobounc(BayesInfo,MyKrig,krigtype=kpls)
 
 print("The best feasible value is ",ybest)

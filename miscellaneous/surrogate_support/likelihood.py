@@ -70,7 +70,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         if KrigInfo["type"].lower() == "kpls":
             plscoeff = KrigInfo["plscoeff"][num]
 
-    if type(x) is float or type(x) is int:
+    if type(x) is float or type(x) is int or type(x) is np.float64 or type(x) is np.int64:
         x = np.array([x])
     if "n_princomp" in KrigInfo:
         nvar = KrigInfo["n_princomp"]
@@ -166,7 +166,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         NegLnLike = tempNegLnLike[0,0]
     except:
         NegLnLike = 10000
-        print("Matrix is ill-conditioned, penalty is used on NegLnLike value")
+        print("Matrix is ill-conditioned, penalty is used for NegLnLike value")
         print("Are you sure want to continue?")
         input("Press Enter to continue...")
 

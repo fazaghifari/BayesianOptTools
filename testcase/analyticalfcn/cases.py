@@ -14,6 +14,8 @@ def evaluate(X,type):
             y[ii, 0] = styb(X[ii, :])
     elif type.lower() == "sasena":
         y = sasena(X)
+    elif type.lower() == "griewank":
+        y = griewank(X)
     elif type.lower() == "schaffer":
         y = schaffer(X)
     else:
@@ -56,6 +58,21 @@ def sasena (x):
         x2 = xtemp[1]
 
         Y[ii,0] = 2 + 0.01*(x2 - x1**2)**2 + (1-x1)**2 + 2*(2-x2)**2 + 7 * np.sin(0.5*x1) * np.sin(0.7*x1*x2)
+    return Y
+
+def griewank (x):
+    d = np.size(x,1)
+    nn = np.size(x,0)
+    Y = np.zeros(shape=[nn,1])
+
+    for ii in range(0,nn):
+        sum = 0
+        prod = 1
+        for jj in range(0,d):
+            xi = x[ii,jj]
+            sum = sum + xi**2 / 4000
+            prod = prod * np.cos(xi/np.sqrt(jj+1))
+        Y[ii,0] = sum - prod + 1
 
     return Y
 

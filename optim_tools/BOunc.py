@@ -2,7 +2,7 @@ import numpy as np
 from copy import deepcopy
 from optim_tools.acquifun_opt import run_acquifun_opt, run_multi_acquifun_opt
 from optim_tools.parego import paregopre
-from surrogate_models.kriging import kriging
+from surrogate_models.kriging import kriging, kpls
 from miscellaneous.surrogate_support.prediction import prediction
 from testcase.analyticalfcn.cases import evaluate
 from miscellaneous.surrogate_support.initinfo import initkriginfo,copymultiKrigInfo
@@ -10,7 +10,7 @@ from optim_tools import searchpareto
 import math
 import scipy.io as sio
 
-def sobounc(BayesInfo,KrigInfoBayes):
+def sobounc(BayesInfo,KrigInfoBayes,**kwargs):
     """
     Perform unconstrained single-objective Bayesian optimization
 
@@ -24,6 +24,7 @@ def sobounc(BayesInfo,KrigInfoBayes):
         yhist - History of best solution observed.
         KrigNewInfo - Structure containing information of final Kriging after optimization.
     """
+    krigfun = kwargs.get('krigtype',kriging)
     # Check necessary parameters
     if "nup" not in BayesInfo:
         raise ValueError("Number of updates for Bayesian optimization, BayesInfo['nup'], is not specified")
@@ -93,7 +94,7 @@ def sobounc(BayesInfo,KrigInfoBayes):
         KrigNewInfo["X"] = np.vstack((KrigNewInfo["X"],xnext))
         KrigNewInfo["y"] = np.vstack((KrigNewInfo["y"],ynext))
         #Re-Create Kriging model
-        KrigNewInfo = kriging(KrigNewInfo,standardization=True)
+        KrigNewInfo = krigfun(KrigNewInfo,standardization=True)
 
         nup = nup+1
         yhist = np.vstack((yhist,np.min(KrigNewInfo["y"])))

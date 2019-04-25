@@ -5,6 +5,7 @@
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__
+deBaardata
 *.py[cod]
 *$py.class
 .idea/
