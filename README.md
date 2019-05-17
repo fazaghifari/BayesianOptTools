@@ -29,6 +29,6 @@ The demo codes are available in the main folder.
 * uncSOBOdemo.py is a demo script for performing unconstrained single objective optimization for Branin test function.
 
 # Contact
-The original program was written by Pramudita Satria Palar, Kemas Zakaria, Ghifari Adam Faza, and is maintained by Aerodynamics Research Group ITB. 
+The original program was written by Pramudita Satria Palar, Kemas Zakaria, Ghifari Adam Faza, and maintained by Aerodynamics Research Group ITB. 
 
 e-mail: pramsp@ftmd.itb.ac.id
