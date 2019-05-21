@@ -132,9 +132,8 @@ def prediction (x,KrigInfo,predtype,**kwargs):
     if KrigInfo["type"].lower() == "kriging":
         for ii in range(0,nkernel):
             PsiComp[:,:,ii] = wgkf[ii]*calckernel(X,x,theta,nvar,type=kernel[ii])
-        psi = np.sum(PsiComp,2)
-        # for i in range (0,n):
-        #     psi[i]= np.exp(-1*np.sum(theta*abs(X[i,:]-x)**p))
+        # psi = np.sum(PsiComp, 2)
+        psi = np.sum(PsiComp,2)*SigmaSqr
 
     elif KrigInfo["type"].lower() == "kpls":
         nvar = KrigInfo["nvar"]
@@ -149,7 +148,13 @@ def prediction (x,KrigInfo,predtype,**kwargs):
     f = fpc + np.dot(np.transpose(psi), mldivide(U,mldivide(np.transpose(U),(y - np.dot(PHI,BE) ))))
     if num == None:
         if KrigInfo["norm_y"] == True:
-            f = (KrigInfo["y_mean"] + KrigInfo["y_std"]*f)
+            if KrigInfo["normtype"] == "default":
+                ymax = np.max(KrigInfo["y"])
+                ymin = np.min(KrigInfo["y"])
+                f = f/2 + 0.5
+                f = f * (ymax-ymin) + ymin
+            if KrigInfo["normtype"] == "std":
+                f = (KrigInfo["y_mean"] + KrigInfo["y_std"]*f)
     else:
         if KrigInfo["norm_y"] == True:
             f = (KrigInfo["y_mean"][num] + KrigInfo["y_std"][num]*f)

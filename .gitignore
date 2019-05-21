@@ -6,6 +6,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__
 deBaardata
+Rheadata
 *.py[cod]
 *$py.class
 .idea/

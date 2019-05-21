@@ -66,12 +66,17 @@ def standardize(X,y,**kwargs):
             # Normalize to [0,1]
             for i in range(0, np.size(X, 1)):
                 X_norm[:, i] = (X[:, i] - ranges[0, i]) / (ranges[1, i] - ranges[0, i])
-            for i in range(0, np.size(y, 1)):
-                y_norm[:, i] = (y[:, i] - ranges[0, i]) / (ranges[1, i] - ranges[0, i])
+            for jj in range(0, np.size(y, 1)):
+                y_norm[:, jj] = (y[:, jj] - ranges[0, 1+i+jj]) / (ranges[1, 1+i+jj] - ranges[0, 1+i+jj])
             # Normalize to [-1,1]
             X_norm = (X_norm - 0.5) * 2
             y_norm = (y_norm - 0.5) * 2
-            return X_norm,y_norm
+
+            # y_mean = np.mean(y, axis=0)
+            # y_std = y.std(axis=0, ddof=1)
+            # y_std[y_std == 0.] = 1.
+            # y_norm = (y - y_mean) / y_std
+            return X_norm,y_norm#,y_mean,y_std
         else:
             #Normalize to [0,1]
             for i in range(0,np.size(X,1)):

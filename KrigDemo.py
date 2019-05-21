@@ -15,12 +15,12 @@ import time
 KrigInfo = dict()
 kernel = ["gaussian"]
 # Sampling
-nsample = 15
+nsample = 25
 nvar = 2
 ub = np.array([10,15])
 lb = np.array([-5,0])
 nup = 3
-sampoption = "rlh"
+sampoption = "halton"
 samplenorm,sample = sampling(sampoption,nvar,nsample,result="real",upbound=ub,lobound=lb)
 X = sample
 #Evaluate sample
@@ -41,10 +41,11 @@ KrigInfo["kernel"] = kernel
 KrigInfo["TrendOrder"] = 0
 KrigInfo["nugget"] = -6
 KrigInfo["n_princomp"] = 2
+KrigInfo["optimizer"] = "cobyla"
 
 #Run Kriging
 t = time.time()
-myKrig = kriging(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
+myKrig = kriging(KrigInfo,standardization=True,normtype="default",normalize_y=True,disp=True)
 elapsed = time.time() - t
 print("elapsed time for train Kriging model: ", elapsed,"s")
 

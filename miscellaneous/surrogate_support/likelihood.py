@@ -37,6 +37,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
     """
     mode = kwargs.get('retresult', "default")
     nvar = KrigInfo["nvar"]
+    nsamp = KrigInfo["nsamp"]
     F = KrigInfo["F"]
     kernel = KrigInfo["kernel"]
     nkernel = KrigInfo["nkernel"]
@@ -75,29 +76,31 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
     if "n_princomp" in KrigInfo:
         nvar = KrigInfo["n_princomp"]
 
-    if len(x) == nvar: # Nugget is not tunable, single kernel
+    if len(x) == nvar+1: # Nugget is not tunable, single kernel
         nugget = KrigInfo["nugget"]
         eps = 10. ** nugget
         wgkf = np.array([1])
-    elif len(x) == nvar+1: # Nugget is tunable, single kernel
+    elif len(x) == nvar+2: # Nugget is tunable, single kernel
         # nugget = rescale(x[nvar],KrigInfo["lbhyp"][0],KrigInfo["ubhyp"][0],KrigInfo["lbhyp"][nvar],KrigInfo["ubhyp"][nvar])[0]
-        nugget = x[nvar]
+        nugget = x[nvar+1]
         eps = 10. ** nugget
         wgkf = np.array([1])
-    elif len(x) == nvar+nkernel: # Nugget is not tunable, multiple kernels
+    elif len(x) == nvar+nkernel+1: # Nugget is not tunable, multiple kernels
         nugget = KrigInfo["nugget"]
-        eps = 10. ** nugget
-        # weight = rescale(x[nvar:nvar+nkernel],KrigInfo["lbhyp"][0],KrigInfo["ubhyp"][0],0,1)
-        weight = x[nvar:nvar+nkernel]
-        wgkf = weight/np.sum(weight)
-    elif len(x) == nvar+nkernel+1:
-        nugget = x[nvar]
         eps = 10. ** nugget
         weight = x[nvar+1:nvar+nkernel+1]
-        wgkf = weight / np.sum(weight)
+        wgkf = weight
+    elif len(x) == nvar+nkernel+2: # Nugget is tunable, multiple kernels
+        nugget = x[nvar+1]
+        eps = 10. ** nugget
+        weight = x[nvar+2:nvar+nkernel+2]
+        wgkf = weight
 
 
     theta = 10**(x[0:nvar])
+    SigmaSqr = 10 ** (x[nvar])
+    sumw = np.sum(wgkf)
+
     if num == None:
         KrigInfo["Theta"] = x[0:nvar]
         KrigInfo["nugget"] = nugget
@@ -118,7 +121,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
     #Build upper half of correlation matrix
     if KrigInfo["type"].lower() == "kriging":
         for ii in range(0,nkernel):
-            PsiComp[:,:,ii] = wgkf[ii]*calckernel(X,X,theta,nvar,type=kernel[ii])
+            PsiComp[:,:,ii] = (wgkf[ii]/sumw)*calckernel(X,X,theta,nvar,type=kernel[ii])
         Psi = np.sum(PsiComp,2)
 
     elif KrigInfo["type"].lower() == "kpls":
@@ -131,7 +134,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
     #Add upper and lower halves and diagonal of ones plus
     #small number to reduce ill-conditioning
     # Psi = Psi + np.transpose(Psi) + np.eye(n) + (np.eye(n)*(eps)) #(np.eye(n)*eps)
-    Psi = Psi + (np.eye(n) * (eps))
+    Psi = Psi*SigmaSqr + (np.eye(n) * (eps))
     testeig = np.linalg.eigvals(Psi)
     if np.any (np.linalg.eigvals(Psi)<0):
         print("Not positive definite")
@@ -157,13 +160,19 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         tempmu     = mldivide(np.dot(np.transpose(F),temp2),np.dot(np.transpose(F),temp1))#np.dot(np.transpose(F),temp1)/np.dot(np.transpose(F),temp2)
         BE = tempmu
 
+        # Rescale Y to have 0 mean gaussian distribution
+        Ymean = y - np.dot(F,BE);
+
         # Use back-substitution of Cholesky instead of inverse
         temp31 = mldivide(np.transpose(U),(y - np.dot(F,BE) )) #just a temporary variable for debugging
-        temp3  = mldivide(U,temp31) #just a temporary variable for debugging
-        SigmaSqr = (np.dot(np.transpose(y - np.dot(F,BE)),(temp3)))/n
+        alpha  = mldivide(U,temp31) #just a temporary variable for debugging
 
-        tempNegLnLike    = -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
-        NegLnLike = tempNegLnLike[0,0]
+        tempNegLnLike    = 0.5 * LnDetPsi + 0.5 * np.dot(np.transpose(Ymean),alpha) + nsamp / 2 * np.log(2*np.pi)
+        NegLnLike = tempNegLnLike[0, 0]
+        # tempNegLnLike = -1 * (-(n / 2) * np.log(SigmaSqr) - 0.5 * LnDetPsi)
+        # NegLnLike = tempNegLnLike
+        # -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
+
     except:
         NegLnLike = 10000
         print("Matrix is ill-conditioned, penalty is used for NegLnLike value")
@@ -174,7 +183,8 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         KrigInfo["U"] = U
         KrigInfo["Psi"] = Psi
         KrigInfo["BE"] = BE
-        KrigInfo["SigmaSqr"] = SigmaSqr[0,0]
+        KrigInfo["SigmaSqr"] = SigmaSqr
+        KrigInfo["NegLnLike"] = NegLnLike
     else:
         KrigInfo["U"][num] = np.array(U)
         KrigInfo["Psi"][num] = np.array(Psi)
