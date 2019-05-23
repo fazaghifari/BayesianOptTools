@@ -53,8 +53,15 @@ def generate_kriging_model(samples, responses):
     return model
 
 
-def test_model(model):
-    """Test Kriging model with sample inputs."""
+def predict(model, inputs):
+    """Extract result from Kriging model with sample inputs.
+
+    Args:
+        model (dict): KrigInfo datastructure as produced by
+            generate_kriging_model. Internally by
+            surrogate_models.kriging.kriging.
+        inputs (np.array): Array of input variables to query.
+    """
     neval = 10000
     sampling = miscellaneous.sampling.samplingplan.sampling
     samplenormout, sampleeval = sampling('rlh',
@@ -122,4 +129,4 @@ if __name__ == '__main__':
     responses = np.transpose([np.loadtxt("cd.dat")])
 
     model = generate_kriging_model(design_samples, responses)
-    # test_model(model, )
+    predict(model, inputs)
