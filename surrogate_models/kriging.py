@@ -51,7 +51,7 @@ def kriging (KrigInfo,**kwargs):
 
     num = kwargs.get('num',None) #Means objective function number XX
     disp = kwargs.get('disp',None)
-    ubvalue = kwargs.get('ub', 3)
+    ubvalue = kwargs.get('ub', 6)
     lbvalue = kwargs.get('lb', -3)
     standardization = kwargs.get('standardization', False)
     standtype = kwargs.get('normtype', "default")
@@ -80,7 +80,8 @@ def kriging (KrigInfo,**kwargs):
         availoptmzr = ["lbfgsb","cmaes","cobyla"]
         if KrigInfo["optimizer"].lower() not in availoptmzr:
             raise TypeError(KrigInfo["optimizer"]," is not a valid acquisition function.")
-        print("The acquisition function is specified to ", KrigInfo["optimizer"], " by user")
+        if disp == True:
+            print("The acquisition function is specified to ", KrigInfo["optimizer"], " by user")
 
     #Polynomial Order
     if "TrendOrder" not in KrigInfo:
@@ -150,6 +151,7 @@ def kriging (KrigInfo,**kwargs):
         # MULTI OBJECTIVE
         KrigInfo["multiobj"] = True
         KrigInfo["num"] = num
+        Y = np.hstack((Y[0],Y[1]))
 
         # KrigInfo["y"][num]= np.transpose(np.array([Y[:,num]]))
 
@@ -161,10 +163,11 @@ def kriging (KrigInfo,**kwargs):
                 KrigInfo["normtype"] = "default"
                 bound = np.vstack((- np.ones(shape=[1, KrigInfo["nvar"]]), np.ones(shape=[1, KrigInfo["nvar"]])))
                 if normy == True:
-                    KrigInfo["X_norm"], KrigInfo["y_norm"][num] = standardize(X, Y, type=standtype.lower(), normy=True, range=np.vstack((np.hstack((KrigInfo["lb"][num],np.min(Y,0))),np.hstack((KrigInfo["ub"][num],np.max(Y,0))))))
+                    KrigInfo["X_norm"], y_normtemp = standardize(X, Y, type=standtype.lower(), normy=True, range=np.vstack((np.hstack((KrigInfo["lb"],np.min(Y,0))),np.hstack((KrigInfo["ub"],np.max(Y,0))))))
                     KrigInfo["norm_y"] = True
+                    KrigInfo["y_norm"][num] = y_normtemp[:,num]
                 else:
-                    KrigInfo["X_norm"] = standardize(X, Y,type=standtype.lower(), range=np.vstack((KrigInfo["lb"][num],KrigInfo["ub"][num])))
+                    KrigInfo["X_norm"] = standardize(X, Y,type=standtype.lower(), range=np.vstack((KrigInfo["lb"],KrigInfo["ub"])))
                     KrigInfo["norm_y"] = False
             else:
                 KrigInfo["normtype"] = "std"

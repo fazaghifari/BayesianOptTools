@@ -54,7 +54,7 @@ def initkriginfo(type,objective=1):
             KrigInfo["nugget"] = -6
             KrigInfo["multiobj"] = True
             KrigInfo["standardization"] = True
-            keys = ["y","Theta", "U", "Psi", "BE", "y_mean", "y_std", "SigmaSqr", "idx", "F", "wgkf","lb","ub", "plscoeff"]
+            keys = ["y","Theta", "U", "Psi", "BE", "y_mean", "y_std", "y_norm", "SigmaSqr", "idx", "F", "wgkf","lb","ub", "plscoeff"]
             for key in keys:
                 KrigInfo[key] = [0]*objective
 

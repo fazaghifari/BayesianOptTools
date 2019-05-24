@@ -3,6 +3,8 @@ from numpy.linalg import solve as mldivide
 from miscellaneous.surrogate_support.kernel import calckernel
 from miscellaneous.sampling.samplingplan import standardize
 from miscellaneous.surrogate_support.trendfunction import compute_regression_mat
+from testcase.analyticalfcn.cases import evaluate
+import warnings
 from scipy.special import erf
 
 def prediction (x,KrigInfo,predtype,**kwargs):
@@ -84,7 +86,7 @@ def prediction (x,KrigInfo,predtype,**kwargs):
         else:
             X = KrigInfo["X_norm"]
             if "y_norm" in KrigInfo:
-                y = KrigInfo["y_norm"][num]
+                y = np.reshape(KrigInfo["y_norm"][num], (-1, 1))
             else:
                 y = KrigInfo["y"][num]
         theta = 10**KrigInfo["Theta"][num]
@@ -146,28 +148,26 @@ def prediction (x,KrigInfo,predtype,**kwargs):
 
     #calculate prediction
     f = fpc + np.dot(np.transpose(psi), mldivide(U,mldivide(np.transpose(U),(y - np.dot(PHI,BE) ))))
+    f_norm = f
     if num == None:
         if KrigInfo["norm_y"] == True:
-            if KrigInfo["normtype"] == "default":
-                ymax = np.max(KrigInfo["y"])
-                ymin = np.min(KrigInfo["y"])
-                f = f/2 + 0.5
-                f = f * (ymax-ymin) + ymin
-            if KrigInfo["normtype"] == "std":
-                f = (KrigInfo["y_mean"] + KrigInfo["y_std"]*f)
+            f = stdtoreal(f,KrigInfo)
     else:
         if KrigInfo["norm_y"] == True:
-            f = (KrigInfo["y_mean"][num] + KrigInfo["y_std"][num]*f)
+            f = stdtoreal(f, KrigInfo)
+            # f = (KrigInfo["y_mean"][num] + KrigInfo["y_std"][num]*f)
 
     #compute sigma-squared error
     dummy1 = mldivide(U,mldivide(np.transpose(U),psi))
     dummy2 = mldivide(U, mldivide(np.transpose(U), PHI))
-    term1 = (1 - np.sum(np.transpose(psi)*np.transpose(dummy1),1))
+    # term1 = (1 - np.sum(np.transpose(psi)*np.transpose(dummy1),1))
+    term1 = (SigmaSqr - np.sum(np.transpose(psi) * np.transpose(dummy1), 1))
     ux = (np.dot(np.transpose(PHI),dummy1))-np.transpose(PC)
-    term2 = ux*(mldivide(np.dot(np.transpose(PHI),dummy2),ux))
+    term2 = ux*(mldivide(np.dot(np.transpose(PHI),dummy2),ux))*SigmaSqr**2
     tempterm1 = np.transpose(np.array([term1]))
     newterm1 = np.matlib.repmat(tempterm1,1,np.size(term2,0))
-    SSqr = np.dot(SigmaSqr,(term1+term2))
+    SSqr = (newterm1 + (term2.transpose()))
+    # SSqr = np.dot(SigmaSqr,(newterm1+(term2.transpose())))
     s = (abs(SSqr))**0.5
 
     #Switch prediction type
@@ -184,18 +184,21 @@ def prediction (x,KrigInfo,predtype,**kwargs):
         elif predtype1.lower() == "ebe":
             output = -SSqr
         elif predtype1.lower() == "ei":
+            if KrigInfo["norm_y"] == True:
+                y = stdtoreal(y, KrigInfo)
             yBest = np.min(y)
             if SSqr.all() == 0:
                 ExpImp = 0
             else:
-                EITermOne = (yBest - f) * (0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((yBest - f) / np.transpose(s) )))
-                EITermTwo = np.transpose(s) * (1 / np.sqrt(2 * np.pi)) * np.exp(-(1 / 2) * (((yBest - f) ** 2) / np.transpose(SSqr) ))
+                warnings.filterwarnings("ignore", category=RuntimeWarning) #Warning comes when y variable is normalized, besides it's not a problem
+                EITermOne = (yBest - f_norm) * (0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((yBest - f_norm) / (s) )))
+                EITermTwo = (s) * (1 / np.sqrt(2 * np.pi)) * np.exp(-(1 / 2) * (((yBest - f_norm) ** 2) / (SSqr) ))
                 # give penalty for CMA-ES optimizer, if both term produce 0. Otherwise, in certain condition it may leads to error in CMA-ES
                 if EITermOne.all() == 0 and EITermTwo.all() == 0:
                     ExpImp = np.array([[np.random.uniform(np.finfo("float").tiny, np.finfo("float").tiny * 100)]])
                 else:
                     ExpImp = (EITermOne + EITermTwo + realmin)
-            output = -ExpImp
+            output = - ExpImp
         elif predtype1.lower() == "poi":
             ProbImp = 0.5 + 0.5 * erf((1 / np.sqrt(2)) * ((np.min(y) - f) / np.transpose(s) ))
             output = -ProbImp
@@ -211,3 +214,14 @@ def prediction (x,KrigInfo,predtype,**kwargs):
             return output
     else:
         return outputtotal
+
+def stdtoreal(f,KrigInfo):
+    if KrigInfo["normtype"] == "default":
+        ymax = np.max(KrigInfo["y"])
+        ymin = np.min(KrigInfo["y"])
+        f = f / 2 + 0.5
+        f = f * (ymax - ymin) + ymin
+    elif KrigInfo["normtype"] == "std":
+        f = (KrigInfo["y_mean"] + KrigInfo["y_std"] * f)
+
+    return f

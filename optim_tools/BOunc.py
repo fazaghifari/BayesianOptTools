@@ -25,6 +25,7 @@ def sobounc(BayesInfo,KrigInfoBayes,**kwargs):
         KrigNewInfo - Structure containing information of final Kriging after optimization.
     """
     krigfun = kwargs.get('krigtype',kriging)
+    norm_y = kwargs.get('normalize_y', True)
     # Check necessary parameters
     if "nup" not in BayesInfo:
         raise ValueError("Number of updates for Bayesian optimization, BayesInfo['nup'], is not specified")
@@ -94,7 +95,7 @@ def sobounc(BayesInfo,KrigInfoBayes,**kwargs):
         KrigNewInfo["X"] = np.vstack((KrigNewInfo["X"],xnext))
         KrigNewInfo["y"] = np.vstack((KrigNewInfo["y"],ynext))
         #Re-Create Kriging model
-        KrigNewInfo = krigfun(KrigNewInfo,standardization=True)
+        KrigNewInfo = krigfun(KrigNewInfo,standardization=True,normalize_y=norm_y)
 
         nup = nup+1
         yhist = np.vstack((yhist,np.min(KrigNewInfo["y"])))
@@ -116,7 +117,7 @@ def sobounc(BayesInfo,KrigInfoBayes,**kwargs):
     ybest = KrigNewInfo["y"][I,:]
     return (xbest,ybest,yhist,KrigNewInfo)
 
-def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
+def mobounc(BayesMultiInfo,KrigInfoBayesMulti,**kwargs):
     """
     Perform unconstrained multi-objective Bayesian optimization
 
@@ -129,6 +130,7 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
       Ybest - Matrix of responses of final non-dominated solutions after optimization.
       KrigNewMultiInfo - Nested structure containing information of final Kriging models after optimization.
     """
+    norm_y = kwargs.get('normalize_y', True)
     # Check necessary parameters
     if "nup" not in BayesMultiInfo:
         raise ValueError("Number of updates for Bayesian optimization, BayesInfo['nup'], is not specified")
@@ -146,7 +148,7 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
 
     # Set necessary params for multiobjective acquisition function
     if BayesMultiInfo["acquifunc"].lower() == "ehvi":
-        BayesMultiInfo["krignum"] = np.size(KrigInfoBayesMulti["y"])
+        BayesMultiInfo["krignum"] = np.size(KrigInfoBayesMulti["y"],0)
         if "refpoint" not in BayesMultiInfo:
             BayesMultiInfo["refpointtype"] = 'dynamic'
     elif BayesMultiInfo["acquifunc"].lower() == "parego":
@@ -196,7 +198,7 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
     if BayesMultiInfo["krignum"] == 1:
         KrigScalarizedInfo = copymultiKrigInfo(KrigInfoBayesMulti,0)
         KrigScalarizedInfo["y"] = paregopre(yall)
-        KrigScalarizedInfo = kriging(KrigScalarizedInfo, standardization=True)
+        KrigScalarizedInfo = kriging(KrigScalarizedInfo, standardization=True, normalize_y=norm_y)
 
     while nup <= BayesMultiInfo["nup"]:
 
@@ -228,8 +230,11 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
         for jj in range(0, len(KrigInfoBayesMulti["y"])):
             KrigNewMultiInfo["y"][jj] = np.vstack((KrigNewMultiInfo["y"][jj],ynext[jj]))
             # Re-create Kriging models if multiple Kriging methods are used.
-            if BayesMultiInfo["krignum"] > 1:
+        if BayesMultiInfo["krignum"] > 1:
+            for jj in range(0, len(KrigInfoBayesMulti["y"])):
                 KrigNewMultiInfo = kriging(KrigNewMultiInfo,standardization=True,num=jj)
+        else:
+            pass
 
         yall = np.vstack((yall,ynext))
         Xall = np.vstack((Xall,xnext))

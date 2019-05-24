@@ -107,8 +107,7 @@ def run_acquifun_opt(BayesInfo, KrigNewInfo, **kwargs):
         Xrand = realval(KrigNewInfo["lb"], KrigNewInfo["ub"], np.random.rand(BayesInfo["nrestart"], KrigNewInfo["nvar"]))
         xnextcand = np.zeros(shape=[BayesInfo["nrestart"], KrigNewInfo["nvar"]])
         fnextcand = np.zeros(shape=[BayesInfo["nrestart"]])
-        lbfgsbbound = np.array([KrigNewInfo["lb"][0], KrigNewInfo["ub"][0]])
-        lbfgsbbound = np.matlib.repmat(lbfgsbbound, len(Xrand[0, :]), 1)
+        lbfgsbbound = np.vstack((KrigNewInfo["lb"],KrigNewInfo["ub"])).transpose()
         for im in range(0,BayesInfo["nrestart"]):
             if probtype == 1:
                 res = minimize(prediction,Xrand[im,:],method='L-BFGS-B',bounds=lbfgsbbound,args=(KrigNewInfo,acquifunc))
@@ -119,6 +118,7 @@ def run_acquifun_opt(BayesInfo, KrigNewInfo, **kwargs):
                 xnextcand[im, :] = res.x
                 fnextcand[im] = res.fun
         I = np.argmin(fnextcand)
+        test = prediction(np.array([10,15]),KrigNewInfo,"EI")
         xnext = xnextcand[I, :]
         fnext = fnextcand[I]
 

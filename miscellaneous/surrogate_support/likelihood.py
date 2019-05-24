@@ -64,10 +64,10 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         else:
             X = KrigInfo["X_norm"]
             F = KrigInfo["F"][num]
-            if "y_norm" in KrigInfo:
-                y = KrigInfo["y_norm"][num]
+            if KrigInfo["norm_y"] == True:
+                y = np.array([KrigInfo["y_norm"][num]]).transpose()
             else:
-                y = KrigInfo["y"][num]
+                y = np.array(KrigInfo["y"][num])
         if KrigInfo["type"].lower() == "kpls":
             plscoeff = KrigInfo["plscoeff"][num]
 
@@ -189,7 +189,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         KrigInfo["U"][num] = np.array(U)
         KrigInfo["Psi"][num] = np.array(Psi)
         KrigInfo["BE"][num] = np.array(BE)
-        KrigInfo["SigmaSqr"][num] = SigmaSqr[0,0]
+        KrigInfo["SigmaSqr"][num] = SigmaSqr
 
     if mode.lower() == "default":
         return NegLnLike
