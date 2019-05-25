@@ -18,6 +18,8 @@ def evaluate(X,type):
         y = griewank(X)
     elif type.lower() == "schaffer":
         y = schaffer(X)
+    elif type.lower() == "schaffer1":
+        y = schaffer1(X)
     elif type.lower() == "fonseca":
         y = fonseca(X)
     else:
@@ -129,4 +131,17 @@ def fonseca (x):
     f = np.hstack((f1,f2))
     if m == 1:
         f = f[0,:]
+    return f
+
+def schaffer1 (x):
+    b = np.size(x[:,0])
+    m = np.size(x, 0)
+    f1 = np.zeros(shape=[b, 1])
+    f2 = np.zeros(shape=[b, 1])
+    for jj in range (0,b):
+        f1[jj,0] = x[jj,0]**2
+        f2[jj,0] = (x[jj,0]-2)**2
+    f = np.hstack((f1, f2))
+    if m == 1:
+        f = f[0, :]
     return f

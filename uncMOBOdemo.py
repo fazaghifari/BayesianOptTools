@@ -4,7 +4,7 @@ from testcase.analyticalfcn.cases import evaluate
 from surrogate_models.kriging import kriging,kpls
 from miscellaneous.surrogate_support.initinfo import initkriginfo
 from miscellaneous.sampling.samplingplan import sampling,realval,standardize
-from testcase.analyticalfcn.cases import schaffer,evaluate
+from testcase.analyticalfcn.cases import schaffer1,evaluate,fonseca
 from optim_tools.BOunc import mobounc
 import time
 from matplotlib import pyplot as plt
@@ -17,12 +17,12 @@ BayesMultiInfo = dict()
 kernel = ["gaussian"]
 
 # Construct Kriging for multiple objective functions
-lb = -1 * np.ones(shape=[nvar])
-ub =  1*np.ones(shape=[nvar])
+lb = -4 * np.ones(shape=[nvar])
+ub =  4*np.ones(shape=[nvar])
 sampoption = "halton"
 samplenorm,sample = sampling(sampoption,nvar,nsample,result="real",upbound=ub,lobound=lb)
 X = sample
-y = schaffer(X)
+y = fonseca(X)
 
 #Set Kriging Info
 KrigMultiInfo = initkriginfo("multi",objective=2)
@@ -30,9 +30,9 @@ KrigMultiInfo["X"] = X
 KrigMultiInfo["y"][0] = np.transpose([y[:,0]])
 KrigMultiInfo["y"][1] = np.transpose([y[:,1]])
 KrigMultiInfo["nvar"] = nvar
-KrigMultiInfo["problem"] = "schaffer"
+KrigMultiInfo["problem"] = "fonseca"
 KrigMultiInfo["nsamp"]= nsample
-KrigMultiInfo["nrestart"] = 10
+KrigMultiInfo["nrestart"] = 7
 KrigMultiInfo["ub"]= ub
 KrigMultiInfo["lb"]= lb
 KrigMultiInfo["kernel"] = kernel

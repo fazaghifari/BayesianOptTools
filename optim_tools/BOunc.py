@@ -209,9 +209,9 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti,**kwargs):
 
         # Perform one iteration of multi-objective Bayesian optimization
         if BayesMultiInfo["krignum"] == 1:
-            xnext,_ = run_acquifun_opt(BayesMultiInfo,KrigScalarizedInfo)
+            xnext,ehvinext = run_acquifun_opt(BayesMultiInfo,KrigScalarizedInfo)
         else:
-            xnext,_ = run_multi_acquifun_opt(BayesMultiInfo,KrigNewMultiInfo,ypar)
+            xnext,ehvinext = run_multi_acquifun_opt(BayesMultiInfo,KrigNewMultiInfo,ypar)
 
         # Evaluate new sample
         ynext = eval('evaluate(xnext,KrigInfoBayesMulti["problem"])')
@@ -232,7 +232,7 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti,**kwargs):
             # Re-create Kriging models if multiple Kriging methods are used.
         if BayesMultiInfo["krignum"] > 1:
             for jj in range(0, len(KrigInfoBayesMulti["y"])):
-                KrigNewMultiInfo = kriging(KrigNewMultiInfo,standardization=True,num=jj)
+                KrigNewMultiInfo = kriging(KrigNewMultiInfo,standardization=True,normalize_y=norm_y,num=jj)
         else:
             pass
 
