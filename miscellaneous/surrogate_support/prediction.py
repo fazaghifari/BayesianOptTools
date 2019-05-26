@@ -65,7 +65,7 @@ def prediction (x,KrigInfo,predtype,**kwargs):
             y = KrigInfo["y"]
         else:
             X = KrigInfo["X_norm"]
-            if "y_norm" in KrigInfo:
+            if KrigInfo["norm_y"] == True:
                 y = KrigInfo["y_norm"]
             else:
                 y = KrigInfo["y"]
@@ -85,7 +85,7 @@ def prediction (x,KrigInfo,predtype,**kwargs):
             y = KrigInfo["y"][num]
         else:
             X = KrigInfo["X_norm"]
-            if "y_norm" in KrigInfo:
+            if KrigInfo["norm_y"] == True:
                 y = np.reshape(KrigInfo["y_norm"][num], (-1, 1))
             else:
                 y = KrigInfo["y"][num]
@@ -141,7 +141,7 @@ def prediction (x,KrigInfo,predtype,**kwargs):
         nvar = KrigInfo["nvar"]
         for ii in range(0, nkernel):
             PsiComp[:, :, ii] = wgkf[ii] * calckernel(X, x, theta, nvar, type=kernel[ii], plscoeff=plscoeff)
-        psi = np.sum(PsiComp, 2)
+        psi = np.sum(PsiComp, 2)*SigmaSqr
 
         # for i in range(0, n):
         #     psi[i] = np.exp(-1 * np.sum(theta * np.dot(((X[i, :] - x) ** p), (plscoeff ** p))))
@@ -154,7 +154,7 @@ def prediction (x,KrigInfo,predtype,**kwargs):
             f = stdtoreal(f,KrigInfo)
     else:
         if KrigInfo["norm_y"] == True:
-            f = stdtoreal(f, KrigInfo)
+            f = stdtoreal(f, KrigInfo,num=num)
             # f = (KrigInfo["y_mean"][num] + KrigInfo["y_std"][num]*f)
 
     #compute sigma-squared error
@@ -215,10 +215,14 @@ def prediction (x,KrigInfo,predtype,**kwargs):
     else:
         return outputtotal
 
-def stdtoreal(f,KrigInfo):
+def stdtoreal(f,KrigInfo,num=None):
     if KrigInfo["normtype"] == "default":
-        ymax = np.max(KrigInfo["y"])
-        ymin = np.min(KrigInfo["y"])
+        if num == None:
+            ymax = np.max(KrigInfo["y"])
+            ymin = np.min(KrigInfo["y"])
+        else:
+            ymax = np.max(KrigInfo["y"][num])
+            ymin = np.min(KrigInfo["y"][num])
         f = f / 2 + 0.5
         f = f * (ymax - ymin) + ymin
     elif KrigInfo["normtype"] == "std":

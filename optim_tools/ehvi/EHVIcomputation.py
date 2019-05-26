@@ -1,6 +1,7 @@
 import numpy as np
 from miscellaneous.surrogate_support.prediction import prediction
 from optim_tools.ehvi.exi2d import exi2d
+from testcase.analyticalfcn.cases import evaluate
 
 def ehvicalc(x,ypar,BayesMultiInfo,KrigNewMultiInfo):
     """
