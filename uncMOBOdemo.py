@@ -17,12 +17,12 @@ BayesMultiInfo = dict()
 kernel = ["gaussian"]
 
 # Construct Kriging for multiple objective functions
-lb = -4 * np.ones(shape=[nvar])
-ub =  4*np.ones(shape=[nvar])
+lb = -1 * np.ones(shape=[nvar])
+ub =  1*np.ones(shape=[nvar])
 sampoption = "halton"
 samplenorm,sample = sampling(sampoption,nvar,nsample,result="real",upbound=ub,lobound=lb)
 X = sample
-y = fonseca(X)
+y = schaffer(X)
 
 #Set Kriging Info
 KrigMultiInfo = initkriginfo("multi",objective=2)
@@ -30,7 +30,7 @@ KrigMultiInfo["X"] = X
 KrigMultiInfo["y"][0] = np.transpose([y[:,0]])
 KrigMultiInfo["y"][1] = np.transpose([y[:,1]])
 KrigMultiInfo["nvar"] = nvar
-KrigMultiInfo["problem"] = "fonseca"
+KrigMultiInfo["problem"] = "schaffer"
 KrigMultiInfo["nsamp"]= nsample
 KrigMultiInfo["nrestart"] = 10
 KrigMultiInfo["ub"]= ub
@@ -40,7 +40,7 @@ KrigMultiInfo["nugget"] = -6
 KrigMultiInfo["nkernel"] = len(KrigMultiInfo["kernel"])
 
 #Set Bayesian Optimization info
-BayesMultiInfo["nup"] = 30
+BayesMultiInfo["nup"] = 3
 BayesMultiInfo["nrestart"] = 10
 BayesMultiInfo["acquifunc"] = "ehvi"
 BayesMultiInfo["acquifuncopt"] = "fmincon"
@@ -51,7 +51,7 @@ for kk in range(0,2):
     myKrig[kk] = kriging(KrigMultiInfo,standardization=True,normtype="default",normalize_y=True,disp=True,num=kk)
 
 #Run Bayesian Optimization
-xbest, ybest, KrigNewMultiInfo = mobounc(BayesMultiInfo,KrigMultiInfo,normalize_y=True)
+xbest, ybest, KrigNewMultiInfo = mobounc(BayesMultiInfo,KrigMultiInfo,normalize_y=True,multiupdate=5)
 
 plt.scatter(y[:,0],y[:,1])
 plt.scatter(KrigMultiInfo["y"][0][nsample:,0],KrigMultiInfo["y"][1][nsample:,0])

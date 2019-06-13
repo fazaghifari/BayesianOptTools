@@ -178,7 +178,7 @@ def run_multi_acquifun_opt(BayesMultiInfo, KrigNewMultiInfo, ypar, **kwargs):
         Xrand = realval(KrigNewMultiInfo["lb"], KrigNewMultiInfo["ub"], np.random.rand(BayesMultiInfo["nrestart"], KrigNewMultiInfo["nvar"]))
         xnextcand = np.zeros(shape=[BayesMultiInfo["nrestart"], KrigNewMultiInfo["nvar"]])
         fnextcand = np.zeros(shape=[BayesMultiInfo["nrestart"]])
-        sigmacmaes = (KrigNewMultiInfo["ub"][0] - KrigNewMultiInfo["lb"][0]) / 6
+        sigmacmaes = (KrigNewMultiInfo["ub"] - KrigNewMultiInfo["lb"]) / 6
         for im in range(0,BayesMultiInfo["nrestart"]):
             if probtype == 1:# For unconstrained problem
                 xnextcand[im,:],es = cma.fmin2(acqufunhandle,Xrand[im,:],sigmacmaes,{'BoundaryHandler': cma.BoundPenalty,'bounds': [KrigNewMultiInfo["lb"].tolist(), KrigNewMultiInfo["ub"].tolist()],'verb_disp': 0,'verbose': -9},args=(ypar,BayesMultiInfo,KrigNewMultiInfo))
@@ -193,8 +193,7 @@ def run_multi_acquifun_opt(BayesMultiInfo, KrigNewMultiInfo, ypar, **kwargs):
         Xrand = realval(KrigNewMultiInfo["lb"], KrigNewMultiInfo["ub"], np.random.rand(BayesMultiInfo["nrestart"], KrigNewMultiInfo["nvar"]))
         xnextcand = np.zeros(shape=[BayesMultiInfo["nrestart"], KrigNewMultiInfo["nvar"]])
         fnextcand = np.zeros(shape=[BayesMultiInfo["nrestart"]])
-        lbfgsbbound = np.array([KrigNewMultiInfo["lb"][0], KrigNewMultiInfo["ub"][0]])
-        lbfgsbbound = np.matlib.repmat(lbfgsbbound, len(Xrand[0, :]), 1)
+        lbfgsbbound = np.hstack((KrigNewMultiInfo["lb"].reshape(-1, 1), KrigNewMultiInfo["ub"].reshape(-1, 1)))
         for im in range(0,BayesMultiInfo["nrestart"]):
             if probtype == 1:# For unconstrained problem
                 res = minimize(acqufunhandle,Xrand[im,:],method='L-BFGS-B',bounds=lbfgsbbound,args=(ypar,BayesMultiInfo,KrigNewMultiInfo))

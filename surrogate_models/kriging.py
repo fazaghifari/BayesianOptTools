@@ -1,6 +1,7 @@
 import numpy as np
 from copy import deepcopy
 from miscellaneous.surrogate_support import likelihood
+from miscellaneous.surrogate_support.krigloocv import loocv
 from miscellaneous.sampling.samplingplan import sampling
 from sklearn.cross_decomposition.pls_ import PLSRegression as pls
 from scipy.optimize import minimize_scalar
@@ -9,7 +10,7 @@ from miscellaneous.surrogate_support.trendfunction import polytruncation, comput
 from scipy.optimize import minimize, fmin_cobyla
 import cma
 
-def kriging (KrigInfo,**kwargs):
+def kriging (KrigInfo,loocvcalc=False,**kwargs):
     """
     Create Kriging model based on the information from inputs and global variables.
     Inputs:
@@ -51,7 +52,7 @@ def kriging (KrigInfo,**kwargs):
 
     num = kwargs.get('num',None) #Means objective function number XX
     disp = kwargs.get('disp',None)
-    ubvalue = kwargs.get('ub', 6)
+    ubvalue = kwargs.get('ub', 3)
     lbvalue = kwargs.get('lb', -3)
     standardization = kwargs.get('standardization', False)
     standtype = kwargs.get('normtype', "default")
@@ -224,6 +225,9 @@ def kriging (KrigInfo,**kwargs):
         U = KrigInfo["U"][num]
         Psi = KrigInfo["U"][num]
 
+        if loocvcalc == True:
+            KrigInfo["LOOCVerror"][num],KrigInfo["LOOCVpred"][num] = loocv(KrigInfo,errtype="mape",num=num)
+
     else:
         # SINGLE OBJECTIVE
         KrigInfo["multiobj"] = False
@@ -309,6 +313,9 @@ def kriging (KrigInfo,**kwargs):
         KrigInfo= likelihood.likelihood(best_x,KrigInfo,retresult="all")
         U = KrigInfo["U"]
         Psi = KrigInfo["Psi"]
+
+        if loocvcalc == True:
+            KrigInfo["LOOCVerror"],KrigInfo["LOOCVpred"] = loocv(KrigInfo,errtype="mape")
 
     return KrigInfo
 

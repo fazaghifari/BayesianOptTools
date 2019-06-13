@@ -17,14 +17,14 @@ kernel = ["gaussian"]
 # Sampling
 nsample = 30
 nvar = 2
-ub = np.array([5,5])
-lb = np.array([-5,-5])
+ub = np.array([10,15])
+lb = np.array([-5,0])
 nup = 3
 sampoption = "halton"
 samplenorm,sample = sampling(sampoption,nvar,nsample,result="real",upbound=ub,lobound=lb)
 X = sample
 #Evaluate sample
-y1 = evaluate(X,"styblinski")
+y1 = evaluate(X,"branin")
 
 #Initialize KrigInfo
 KrigInfo = initkriginfo("single")
@@ -32,7 +32,7 @@ KrigInfo = initkriginfo("single")
 KrigInfo["X"] = X
 KrigInfo["y"] = y1
 KrigInfo["nvar"] = nvar
-KrigInfo["problem"] = "styblinski"
+KrigInfo["problem"] = "branin"
 KrigInfo["nsamp"]= nsample
 KrigInfo["nrestart"] = 5
 KrigInfo["ub"]= ub
@@ -52,8 +52,8 @@ print("elapsed time for train Kriging model: ", elapsed,"s")
 #Test Kriging Output
 neval = 10000
 samplenormout,sampleeval = sampling(sampoption,nvar,neval,result="real",upbound=ub,lobound=lb)
-xx = np.linspace(-5, 5, 100)
-yy = np.linspace(-5, 5, 100)
+xx = np.linspace(-5, 10, 100)
+yy = np.linspace(0, 15, 100)
 Xevalx, Xevaly= np.meshgrid(xx, yy)
 Xeval = np.zeros(shape=[neval,2])
 Xeval[:,0] = np.reshape(Xevalx,(neval))
@@ -63,7 +63,7 @@ Xeval[:,1] = np.reshape(Xevaly,(neval))
 yeval = np.zeros(shape=[neval,1])
 yact = np.zeros(shape=[neval,1])
 yeval= prediction(Xeval,KrigInfo,"pred")
-yact = evaluate(Xeval,"styblinski")
+yact = evaluate(Xeval,"branin")
 hasil = np.hstack((yeval,yact))
 
 #Evaluate RMSE
