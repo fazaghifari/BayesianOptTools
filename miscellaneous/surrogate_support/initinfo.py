@@ -1,19 +1,18 @@
 class KrigingModel:
     """A container class for a Kriging model.
-
+    
     A class implementation of init_kriginfo for future work.
-
+    
     Date: 24/05/2019
     Author: Tim Jim
     """
-
     def __init__(self, objectives=1):
         """Initialise a new Kriging model.
-
+        
         Args:
             objectives (int, optional): Number of objective functions.
             Defaults to 1.
-
+    
         Raises:
             TypeError: If objectives is not an integer.
             ValueError: If objectives < 1.
@@ -41,7 +40,7 @@ class KrigingModel:
         else:
             raise ValueError("The number of objectives must be 1 or greater.")
 
-        multikeys = ['y', 'lb', 'ub', 'Theta', 'U', 'Psi', 'BE', 'y_mean', 'y_norm',
+        multikeys = ['y', 'lb', 'ub', 'Theta', 'U', 'Psi', 'BE', 'y_mean',
                      'y_std', 'SigmaSqr', 'idx', 'F', 'wgkf', 'plscoeff']
         for key in multikeys:
             setattr(self, key, [None, ] * objectives)
@@ -49,14 +48,14 @@ class KrigingModel:
 
 def init_kriginfo(objectives=1):
     """Initialise the Kriging model dictionary structure.
-
+    
     Initialize the values of KrigInfo, the value will be set to default value.
     You can change the value of KrigInfo outside this function.
-
+    
     If objectives is set to 1, a single objective Kriging will be initialised.
     Otherwise, if objectives > 1, a multiobjective Kriging model will be
     initialised.
-
+    
     For multiobjective Kriging, some values are initialised with lists with
     the length of objectives, a Kriging model is built for each objective.
 
@@ -119,7 +118,7 @@ def init_kriginfo(objectives=1):
         raise ValueError("The number of objectives must be 1 or greater.")
 
     multikeys = ['y', 'lb', 'ub', 'Theta', 'U', 'Psi', 'BE', 'y_mean', 'y_std',
-                 'SigmaSqr', 'y_norm', 'idx', 'F', 'wgkf', 'plscoeff']
+                 'SigmaSqr', 'idx', 'F', 'wgkf', 'plscoeff']
     for key in multikeys:
         KrigInfo[key] = [0] * objectives
 
@@ -163,7 +162,7 @@ def copymultiKrigInfo(KrigMultiInfo, num):
     KrigNewInfo['lb'] = KrigMultiInfo['lb']
     KrigNewInfo['kernel'] = KrigMultiInfo['kernel']
     KrigNewInfo['nugget'] = KrigMultiInfo['nugget']
-    keys = ['Theta', 'U', 'Psi', 'BE', 'y_mean', 'y_std', 'y_norm', 'SigmaSqr', 'idx', 'F', 'wgkf', 'plscoeff']
+    keys = ['Theta', 'U', 'Psi', 'BE', 'y_mean', 'y_std', 'SigmaSqr', 'idx', 'F', 'wgkf', 'plscoeff']
     for key in keys:
         KrigNewInfo[key] = KrigMultiInfo[key][num]
 

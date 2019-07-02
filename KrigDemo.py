@@ -15,7 +15,7 @@ import time
 KrigInfo = dict()
 kernel = ["gaussian"]
 # Sampling
-nsample = 30
+nsample = 25
 nvar = 2
 ub = np.array([10,15])
 lb = np.array([-5,0])
@@ -45,7 +45,7 @@ KrigInfo["optimizer"] = "cobyla"
 
 #Run Kriging
 t = time.time()
-myKrig = kriging(KrigInfo,standardization=True,normtype="default",normalize_y=True,disp=True)
+myKrig = kriging(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
 elapsed = time.time() - t
 print("elapsed time for train Kriging model: ", elapsed,"s")
 
@@ -83,3 +83,4 @@ fig = plt.figure()
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(x1eval, x2eval, yeval1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
 plt.show()
+

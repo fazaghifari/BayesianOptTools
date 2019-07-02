@@ -51,7 +51,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
             y = KrigInfo["y"]
         else:
             X = KrigInfo["X_norm"]
-            if "y_norm" in KrigInfo:
+            if "y_norm" in KrigInfo and KrigInfo["y_norm"][0] != 0:
                 y = KrigInfo["y_norm"]
             else:
                 y = KrigInfo["y"]
@@ -89,17 +89,16 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         nugget = KrigInfo["nugget"]
         eps = 10. ** nugget
         weight = x[nvar+1:nvar+nkernel+1]
-        wgkf = weight
+        wgkf = weight/ np.sum(weight)
     elif len(x) == nvar+nkernel+2: # Nugget is tunable, multiple kernels
         nugget = x[nvar+1]
         eps = 10. ** nugget
         weight = x[nvar+2:nvar+nkernel+2]
-        wgkf = weight
+        wgkf = weight/ np.sum(weight)
 
 
     theta = 10**(x[0:nvar])
     SigmaSqr = 10 ** (x[nvar])
-    sumw = np.sum(wgkf)
 
     if num == None:
         KrigInfo["Theta"] = x[0:nvar]
@@ -121,7 +120,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
     #Build upper half of correlation matrix
     if KrigInfo["type"].lower() == "kriging":
         for ii in range(0,nkernel):
-            PsiComp[:,:,ii] = (wgkf[ii]/sumw)*calckernel(X,X,theta,nvar,type=kernel[ii])
+            PsiComp[:,:,ii] = wgkf[ii]*calckernel(X,X,theta,nvar,type=kernel[ii])
         Psi = np.sum(PsiComp,2)
 
     elif KrigInfo["type"].lower() == "kpls":
@@ -134,7 +133,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
     #Add upper and lower halves and diagonal of ones plus
     #small number to reduce ill-conditioning
     # Psi = Psi + np.transpose(Psi) + np.eye(n) + (np.eye(n)*(eps)) #(np.eye(n)*eps)
-    Psi = Psi*SigmaSqr + (np.eye(n) * (eps))
+    Psi = Psi + (np.eye(n) * (eps))
     testeig = np.linalg.eigvals(Psi)
     if np.any (np.linalg.eigvals(Psi)<0):
         print("Not positive definite")
@@ -160,19 +159,18 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         tempmu     = mldivide(np.dot(np.transpose(F),temp2),np.dot(np.transpose(F),temp1))#np.dot(np.transpose(F),temp1)/np.dot(np.transpose(F),temp2)
         BE = tempmu
 
-        # Rescale Y to have 0 mean gaussian distribution
-        Ymean = y - np.dot(F,BE);
-
         # Use back-substitution of Cholesky instead of inverse
         temp31 = mldivide(np.transpose(U),(y - np.dot(F,BE) )) #just a temporary variable for debugging
-        alpha  = mldivide(U,temp31) #just a temporary variable for debugging
+        temp3  = mldivide(U,temp31) #just a temporary variable for debugging
+        # SigmaSqr = (np.dot(np.transpose(y - np.dot(F,BE)),(temp3)))/n
 
-        tempNegLnLike    = 0.5 * LnDetPsi + 0.5 * np.dot(np.transpose(Ymean),alpha) + nsamp / 2 * np.log(2*np.pi)
-        NegLnLike = tempNegLnLike[0, 0]
-        # tempNegLnLike = -1 * (-(n / 2) * np.log(SigmaSqr) - 0.5 * LnDetPsi)
+        # Ln likelihood
+        tempNegLnLike = -0.5*LnDetPsi - nsamp/2 * np.log(2*np.pi) - nsamp/2 * np.log(SigmaSqr) - np.dot(np.transpose(y-np.dot(F,BE)),temp3)/(2*SigmaSqr)
+        NegLnLike = -tempNegLnLike[0, 0]
+
+        #Concentrated Ln-likelihood
+        # tempNegLnLike    = -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
         # NegLnLike = tempNegLnLike
-        # -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
-
     except:
         NegLnLike = 10000
         print("Matrix is ill-conditioned, penalty is used for NegLnLike value")

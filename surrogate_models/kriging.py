@@ -52,8 +52,8 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
 
     num = kwargs.get('num',None) #Means objective function number XX
     disp = kwargs.get('disp',None)
-    ubvalue = kwargs.get('ub', 3)
-    lbvalue = kwargs.get('lb', -3)
+    ubvalue = kwargs.get('ub', 4)
+    lbvalue = kwargs.get('lb', -4)
     standardization = kwargs.get('standardization', False)
     standtype = kwargs.get('normtype', "default")
     normy = kwargs.get('normalize_y', True)
@@ -247,6 +247,7 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
                     KrigInfo["norm_y"] = False
             else:
                 KrigInfo["normtype"] = "std"
+                bound = np.vstack((- np.ones(shape=[1, KrigInfo["nvar"]]), np.ones(shape=[1, KrigInfo["nvar"]])))
                 if normy == True:
                     KrigInfo["X_norm"], KrigInfo["y_norm"], KrigInfo["X_mean"], KrigInfo["y_mean"], \
                     KrigInfo["X_std"], KrigInfo["y_std"] = standardize(X, Y, type=standtype.lower(), normy=True)
@@ -308,8 +309,7 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
             print("Single Objective, train hyperparam, end.")
             print("Best hyperparameter is ", best_x)
             print("With NegLnLikelihood of ", neglnlikecand[I])
-        # best_x = np.array([0.11246519,0.41057124,1.3334023389011314])
-        # best_x = np.array([-0.30828383, -0.15091326])
+        # best_x = np.array([-0.74496822, -0.82209113, -0.21335276136851444]) # inject value best_x for debugging
         KrigInfo= likelihood.likelihood(best_x,KrigInfo,retresult="all")
         U = KrigInfo["U"]
         Psi = KrigInfo["Psi"]
@@ -364,8 +364,8 @@ def kpls (KrigInfo,**kwargs):
 
     num = kwargs.get('num', None)  # Means objective function number XX
     disp = kwargs.get('disp', None)
-    ubvalue = kwargs.get('ub', 3)
-    lbvalue = kwargs.get('lb', -3)
+    ubvalue = kwargs.get('ub', 6)
+    lbvalue = kwargs.get('lb', -6)
     standardization = kwargs.get('standardization', False)
     standtype = kwargs.get('normtype', "default")
     normy = kwargs.get('normalize_y', False)
