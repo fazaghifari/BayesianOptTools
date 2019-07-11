@@ -73,7 +73,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
 
     if type(x) is float or type(x) is int or type(x) is np.float64 or type(x) is np.int64:
         x = np.array([x])
-    if "n_princomp" in KrigInfo:
+    if KrigInfo["n_princomp"] is not False:
         nvar = KrigInfo["n_princomp"]
 
     if len(x) == nvar+1: # Nugget is not tunable, single kernel

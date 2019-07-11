@@ -1,7 +1,7 @@
 import numpy as np
 from miscellaneous.sampling.samplingplan import realval
 from miscellaneous.surrogate_support.prediction import prediction
-from surrogate_models.kriging import kriging
+from surrogate_models.kriging import kriging,kpls
 from testcase.RA.testcase import evaluate
 import matplotlib.pyplot as plt
 from scipy.stats import mode
@@ -26,16 +26,34 @@ def akmcs(KrigInfo,akmcsInfo):
     else:
         pass
 
+    if "krigtype" not in akmcsInfo:
+        akmcsInfo["krigtype"] = "kriging"
+        print("Kriging type is set to ", akmcsInfo["krigtype"])
+    else:
+        availmod = ["kriging", "kpls"]
+        if akmcsInfo["krigtype"].lower() not in availmod:
+            raise TypeError(akmcsInfo["krigtype"], " is not a valid acquisition function.")
+        print("Kriging type is set to ", akmcsInfo["krigtype"], " by user")
+
     # Get important variables
     init_samp = akmcsInfo["init_samp"]
     maxupdate = akmcsInfo["maxupdate"]
 
     # Run Kriging
-    t = time.time()
-    KrigInfo = kriging(KrigInfo, standardization=True, normtype="std", normalize_y=False, disp=True, loocvcalc=True)
-    elapsed = time.time() - t
-    print("elapsed time for train Kriging model: ", elapsed, "s")
-    print("LOOCV Error Kriging : ", KrigInfo["LOOCVerror"], " % (MAPE)")
+    if akmcsInfo["krigtype"].lower() == "kriging":
+        t = time.time()
+        KrigInfo = kriging(KrigInfo, standardization=True, normtype="std", normalize_y=False, disp=True, loocvcalc=True)
+        elapsed = time.time() - t
+        print("elapsed time for train Kriging model: ", elapsed, "s")
+        print("LOOCV Error Kriging : ", KrigInfo["LOOCVerror"], " % (MAPE)")
+    elif akmcsInfo["krigtype"].lower() == "kpls":
+        t = time.time()
+        KrigInfo = kpls(KrigInfo, standardization=True, normtype="std", normalize_y=False, disp=True, loocvcalc=True)
+        elapsed = time.time() - t
+        print("elapsed time for train Kriging model: ", elapsed, "s")
+        print("LOOCV Error Kriging : ", KrigInfo["LOOCVerror"], " % (MAPE)")
+    else:
+        raise ValueError("Kriging Model not available.")
 
     # Predict all Monte Carlo Samples
     Gx,sigmaG = prediction(init_samp, KrigInfo, ["pred","s"])
@@ -67,7 +85,14 @@ def akmcs(KrigInfo,akmcsInfo):
             KrigInfo["y"] = np.vstack((KrigInfo["y"],ynew))
             KrigInfo["X"] = np.vstack((KrigInfo["X"],xnew))
             KrigInfo["nsamp"] = KrigInfo["nsamp"]+1
-            KrigInfo = kriging(KrigInfo, standardization=True, normtype="std", normalize_y=False, disp=False, loocvcalc=True)
+
+            if akmcsInfo["krigtype"].lower() == "kriging":
+                KrigInfo = kriging(KrigInfo, standardization=True, normtype="std", normalize_y=False, disp=False)
+            elif akmcsInfo["krigtype"].lower() == "kpls":
+                KrigInfo = kpls(KrigInfo, standardization=True, normtype="std", normalize_y=False, disp=False)
+            else:
+                pass
+
             Gx, sigmaG = prediction(init_samp, KrigInfo, ["pred", "s"])
             Pf = pf(Gx, init_samp)
             cov = COVPf(Pf, init_samp)
@@ -77,7 +102,7 @@ def akmcs(KrigInfo,akmcsInfo):
                 #plotting
                 plotting(Uall,sigmaG,init_samp, KrigInfo["X"],i+1, updateX=updateX)
 
-            if Pf >= 2 and i >= 15:
+            if Uval >= 2 and i >= 15:
                 break
             else:
                 pass
@@ -115,6 +140,8 @@ def mcpopgen(lb=None,ub=None,n_order=6,n_coeff=1,type="random",sigma=1,ndim=2):
     nmc = int(n_coeff*10**n_order)
     if type.lower()== "gaussian":
         pop = sigma*np.random.randn(nmc,ndim)
+    elif type.lower() == "lognormal":
+        pop = np.random.lognormal(0,sigma)
     elif type.lower()== "random":
         if lb.any() == None or ub.any() == None:
             raise ValueError("type 'random' is selected, please input lower bound and upper bound value")

@@ -52,12 +52,13 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
 
     num = kwargs.get('num',None) #Means objective function number XX
     disp = kwargs.get('disp',None)
-    ubvalue = kwargs.get('ub', 4)
-    lbvalue = kwargs.get('lb', -4)
+    ubvalue = kwargs.get('ub', 5)
+    lbvalue = kwargs.get('lb', -5)
     standardization = kwargs.get('standardization', False)
     standtype = kwargs.get('normtype', "default")
     normy = kwargs.get('normalize_y', True)
     nbhyp = KrigInfo["nvar"]+1
+    KrigInfo["n_princomp"] = False
     Y = KrigInfo["y"]
     X = KrigInfo["X"]
     sigmacmaes = (ubvalue-lbvalue)/5
@@ -78,7 +79,7 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
         KrigInfo["optimizer"] = "lbfgsb"
         print("The acquisition function is not specified, set to lbfgsb")
     else:
-        availoptmzr = ["lbfgsb","cmaes","cobyla"]
+        availoptmzr = ["lbfgsb","cmaes","cobyla","slsqp"]
         if KrigInfo["optimizer"].lower() not in availoptmzr:
             raise TypeError(KrigInfo["optimizer"]," is not a valid acquisition function.")
         if disp == True:
@@ -276,13 +277,15 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
             res = minimize_scalar(likelihood.likelihood, bounds=(lbvalue, ubvalue), method='golden')
             best_x = np.array([res.x])
         else:
-            if KrigInfo["optimizer"] == "lbfgsb":
+            if KrigInfo["optimizer"] == "lbfgsb" or KrigInfo["optimizer"] == "slsqp":
                 lbfgsbbound = np.transpose(np.vstack((lbhyp, ubhyp)))
             elif KrigInfo["optimizer"] == "cobyla":
                 constraints = []
                 for i in range(len(ubhyp)):
                     constraints.append(lambda x, Kriginfo, itemp=i: x[itemp] - lbhyp[itemp])
                     constraints.append(lambda x, Kriginfo, itemp=i: ubhyp[itemp] - x[itemp])
+            else:
+                pass
 
             if disp == True:
                 print("Hyperparam training is repeated for ",KrigInfo['nrestart']," time(s)")
@@ -294,6 +297,10 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
                     neglnlikecand[ii] = es.result[1]
                 elif KrigInfo["optimizer"] == "lbfgsb":
                     res = minimize(likelihood.likelihood, xhyp[ii, :], method='L-BFGS-B', bounds=lbfgsbbound, args=(KrigInfo, num))
+                    bestxcand[ii, :] = res.x
+                    neglnlikecand[ii] = res.fun
+                elif KrigInfo["optimizer"] == "slsqp":
+                    res = minimize(likelihood.likelihood, xhyp[ii, :], method='SLSQP', bounds=lbfgsbbound, args=(KrigInfo, num))
                     bestxcand[ii, :] = res.x
                     neglnlikecand[ii] = res.fun
                 elif KrigInfo["optimizer"] == "cobyla":
@@ -309,7 +316,6 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
             print("Single Objective, train hyperparam, end.")
             print("Best hyperparameter is ", best_x)
             print("With NegLnLikelihood of ", neglnlikecand[I])
-        # best_x = np.array([-0.74496822, -0.82209113, -0.21335276136851444]) # inject value best_x for debugging
         KrigInfo= likelihood.likelihood(best_x,KrigInfo,retresult="all")
         U = KrigInfo["U"]
         Psi = KrigInfo["Psi"]
@@ -321,7 +327,7 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
 
 
 
-def kpls (KrigInfo,**kwargs):
+def kpls (KrigInfo, loocvcalc=False, **kwargs):
     """
     Create Kriging with Partial Least Square model based on the information from inputs and global variables.
     Inputs:
@@ -364,11 +370,11 @@ def kpls (KrigInfo,**kwargs):
 
     num = kwargs.get('num', None)  # Means objective function number XX
     disp = kwargs.get('disp', None)
-    ubvalue = kwargs.get('ub', 6)
-    lbvalue = kwargs.get('lb', -6)
+    ubvalue = kwargs.get('ub', 5)
+    lbvalue = kwargs.get('lb', -3)
     standardization = kwargs.get('standardization', False)
     standtype = kwargs.get('normtype', "default")
-    normy = kwargs.get('normalize_y', False)
+    normy = kwargs.get('normalize_y', True)
     nbhyp = KrigInfo["nvar"]+1
     y = KrigInfo["y"]
     X = KrigInfo["X"]
@@ -377,14 +383,14 @@ def kpls (KrigInfo,**kwargs):
     # Set default value for number of principal component
     if "n_princomp" not in KrigInfo:
         KrigInfo["n_princomp"] = 1
-        n_princomp = KrigInfo["n_princomp"]+1
+        n_princomp = KrigInfo["n_princomp"]
     else:
-        n_princomp = KrigInfo["n_princomp"]+1
+        n_princomp = KrigInfo["n_princomp"]
 
     # upperbound and lowerbound for Theta
-    ubtheta = np.zeros(shape=[n_princomp]);
+    ubtheta = np.zeros(shape=[n_princomp+1]);
     ubtheta[:] = ubvalue
-    lbtheta = np.zeros(shape=[n_princomp]);
+    lbtheta = np.zeros(shape=[n_princomp+1]);
     lbtheta[:] = lbvalue
     opt = "min"
 
@@ -397,10 +403,9 @@ def kpls (KrigInfo,**kwargs):
         KrigInfo["optimizer"] = "lbfgsb"
         print("The acquisition function is not specified, set to lbfgsb")
     else:
-        availoptmzr = ["lbfgsb", "cmaes", "cobyla"]
+        availoptmzr = ["lbfgsb", "cmaes", "cobyla", "slsqp"]
         if KrigInfo["optimizer"].lower() not in availoptmzr:
             raise TypeError(KrigInfo["optimizer"], " is not a valid acquisition function.")
-        print("The acquisition function is specified to ", KrigInfo["optimizer"], " by user")
 
     # Polynomial Order
     if "TrendOrder" not in KrigInfo:
@@ -561,19 +566,20 @@ def kpls (KrigInfo,**kwargs):
                 KrigInfo["normtype"] = "default"
                 bound = np.vstack((- np.ones(shape=[1, KrigInfo["nvar"]]), np.ones(shape=[1, KrigInfo["nvar"]])))
                 if normy == True:
-                    KrigInfo["X_norm"], KrigInfo["y_norm"] = standardize(X, y, type=standtype.lower(), normy=True,range=np.vstack((KrigInfo["lb"][num],KrigInfo["ub"][num])))
+                    KrigInfo["X_norm"], KrigInfo["y_norm"]= standardize(X, y, type=standtype.lower(), normy=True, range=np.vstack((np.hstack((KrigInfo["lb"],np.min(y))),np.hstack((KrigInfo["ub"],np.max(y))))))
                     KrigInfo["norm_y"] = True
                 else:
-                    KrigInfo["X_norm"] = standardize(X, y, type=standtype.lower(), range=np.vstack((KrigInfo["lb"][num], KrigInfo["ub"][num])))
+                    KrigInfo["X_norm"] = standardize(X, y, type=standtype.lower(), range=np.vstack((KrigInfo["lb"],KrigInfo["ub"])))
                     KrigInfo["norm_y"] = False
             else:
                 KrigInfo["normtype"] = "std"
+                bound = np.vstack((- np.ones(shape=[1, KrigInfo["nvar"]]), np.ones(shape=[1, KrigInfo["nvar"]])))
                 if normy == True:
                     KrigInfo["X_norm"], KrigInfo["y_norm"], KrigInfo["X_mean"], KrigInfo["y_mean"], \
                     KrigInfo["X_std"], KrigInfo["y_std"] = standardize(X, y, type=standtype.lower(), normy=True)
                     KrigInfo["norm_y"] = True
                 else:
-                    KrigInfo["X_norm"], KrigInfo["X_mean"], KrigInfo["X_std"] = standardize(X, y, type=standtype.lower())
+                    KrigInfo["X_norm"], KrigInfo["X_mean"], KrigInfo["X_std"] = standardize(X, y,type=standtype.lower())
                     KrigInfo["norm_y"] = False
             KrigInfo["standardization"] = True
         else:
@@ -592,13 +598,13 @@ def kpls (KrigInfo,**kwargs):
 
         # Find optimum value of Theta
         if KrigInfo["nrestart"] <=1:
-            xhyp = n_princomp*[0]
+            xhyp = (n_princomp+1)*[0]
         else:
-            _,xhyp = sampling('sobol',n_princomp,KrigInfo['nrestart'],result="real",upbound=ubhyp,lobound=lbhyp)
+            _,xhyp = sampling('sobol',n_princomp+1,KrigInfo['nrestart'],result="real",upbound=ubhyp,lobound=lbhyp)
 
-        bestxcand = np.zeros(shape=[KrigInfo['nrestart'],n_princomp])
+        bestxcand = np.zeros(shape=[KrigInfo['nrestart'],n_princomp+1])
         neglnlikecand = np.zeros(shape=[KrigInfo['nrestart']])
-        if n_princomp == 1:
+        if n_princomp+1 == 1:
             if disp == True:
                 print("Hyperparam training is repeated for ",KrigInfo['nrestart']," time(s)")
             for ii in range(0, KrigInfo['nrestart']):
@@ -609,14 +615,39 @@ def kpls (KrigInfo,**kwargs):
                 neglnlikecand[ii] = res.fun
             I = np.argmin(neglnlikecand)
             best_x = bestxcand[I, :]
+
         else:
+            if KrigInfo["optimizer"] == "lbfgsb" or KrigInfo["optimizer"] == "slsqp":
+                lbfgsbbound = np.transpose(np.vstack((lbhyp, ubhyp)))
+            elif KrigInfo["optimizer"] == "cobyla":
+                constraints = []
+                for i in range(len(ubhyp)):
+                    constraints.append(lambda x, Kriginfo, itemp=i: x[itemp] - lbhyp[itemp])
+                    constraints.append(lambda x, Kriginfo, itemp=i: ubhyp[itemp] - x[itemp])
+            else:
+                pass
+
             if disp == True:
                 print("Hyperparam training is repeated for ",KrigInfo['nrestart']," time(s)")
             for ii in range(0,KrigInfo['nrestart']):
                 if disp == True:
                     print("hyperparam training attempt number ",ii+1)
-                bestxcand[ii, :], es = cma.fmin2(likelihood.likelihood,xhyp[ii,:],sigmacmaes,{'bounds': [lbhyp.tolist(), ubhyp.tolist()],'scaling_of_variables':scaling,'verb_disp': 0, 'verbose':-9},args=(KrigInfo,))
-                neglnlikecand[ii] = es.result[1]
+                if KrigInfo["optimizer"] == "cmaes":
+                    bestxcand[ii, :], es = cma.fmin2(likelihood.likelihood,xhyp[ii,:],sigmacmaes,{'bounds': [lbhyp.tolist(), ubhyp.tolist()],'scaling_of_variables':scaling,'verb_disp': 0, 'verbose':-9},args=(KrigInfo,))
+                    neglnlikecand[ii] = es.result[1]
+                elif KrigInfo["optimizer"] == "lbfgsb":
+                    res = minimize(likelihood.likelihood, xhyp[ii, :], method='L-BFGS-B', bounds=lbfgsbbound, args=(KrigInfo, num))
+                    bestxcand[ii, :] = res.x
+                    neglnlikecand[ii] = res.fun
+                elif KrigInfo["optimizer"] == "slsqp":
+                    res = minimize(likelihood.likelihood, xhyp[ii, :], method='SLSQP', bounds=lbfgsbbound,
+                                   args=(KrigInfo, num))
+                    bestxcand[ii, :] = res.x
+                    neglnlikecand[ii] = res.fun
+                elif KrigInfo["optimizer"] == "cobyla":
+                    res = fmin_cobyla(likelihood.likelihood, xhyp[ii, :], constraints, rhobeg = 0.5, rhoend = 1e-4, args=(KrigInfo,))
+                    bestxcand[ii, :] = res
+                    neglnlikecand[ii] = likelihood.likelihood(res,KrigInfo)
                 if disp == True:
                     print(" ")
             I = np.argmin(neglnlikecand)
@@ -629,5 +660,8 @@ def kpls (KrigInfo,**kwargs):
         KrigInfo= likelihood.likelihood(best_x,KrigInfo,retresult="all")
         U = KrigInfo["U"]
         Psi = KrigInfo["Psi"]
+
+        if loocvcalc == True:
+            KrigInfo["LOOCVerror"],KrigInfo["LOOCVpred"] = loocv(KrigInfo,errtype="mape")
 
     return KrigInfo

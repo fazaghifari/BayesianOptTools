@@ -115,7 +115,7 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
         KeyError:
     """
     nvar = KrigInfo['nvar']
-    if 'n_princomp' in KrigInfo:
+    if KrigInfo["n_princomp"] is not False:
         nvar = KrigInfo['n_princomp']
     kernel = KrigInfo['kernel']
     nkernel = KrigInfo['nkernel']
@@ -167,8 +167,8 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
     npred = np.size(x, axis=0)
 
     # Construct regression matrix for prediction
-    bound = np.vstack((- np.ones(shape=[1, nvar]), np.ones(shape=[1, nvar])))
-    PC = compute_regression_mat(idx, x, bound, np.ones(shape=[nvar]))
+    bound = np.vstack((- np.ones(shape=[1, KrigInfo["nvar"]]), np.ones(shape=[1, KrigInfo["nvar"]])))
+    PC = compute_regression_mat(idx, x, bound, np.ones(shape=[KrigInfo["nvar"]]))
     fpc = np.dot(PC, BE)
 
     PsiComp = np.zeros(shape=[n, npred, nkernel])
@@ -183,7 +183,7 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
         #     psi[i]= np.exp(-1*np.sum(theta*abs(X[i,:]-x)**p))
     elif KrigInfo['type'].lower() == 'kpls':
         for ii in range(0, nkernel):
-            psi_i = calckernel(X, x, theta, nvar, type=kernel[ii],
+            psi_i = calckernel(X, x, theta, KrigInfo["nvar"], type=kernel[ii],
                                plscoeff=plscoeff)
             PsiComp[:, :, ii] = wgkf[ii] * psi_i
         psi = np.sum(PsiComp, 2)
@@ -199,9 +199,14 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
                      mldivide(U,
                               mldivide(np.transpose(U),
                                        (y - np.dot(PHI, BE)))))
-    if KrigInfo['norm_y'] is True:
-        f = (KrigInfo['y_mean'] + get_val(KrigInfo, 'y_std', num) * f)
-    
+
+    if num == None:
+        if KrigInfo["norm_y"] == True:
+            f = stdtoreal(f,KrigInfo)
+    else:
+        if KrigInfo["norm_y"] == True:
+            f = stdtoreal(f, KrigInfo,num=num)
+
     # Compute sigma-squared error
     dummy1 = mldivide(U, mldivide(np.transpose(U), psi))
     dummy2 = mldivide(U, mldivide(np.transpose(U), PHI))
@@ -275,3 +280,18 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
             return outputs[0]
     else:
         return outputs
+
+def stdtoreal(f,KrigInfo,num=None):
+    if KrigInfo["normtype"] == "default":
+        if num == None:
+            ymax = np.max(KrigInfo["y"])
+            ymin = np.min(KrigInfo["y"])
+        else:
+            ymax = np.max(KrigInfo["y"][num])
+            ymin = np.min(KrigInfo["y"][num])
+        f = f / 2 + 0.5
+        f = f * (ymax - ymin) + ymin
+    elif KrigInfo["normtype"] == "std":
+        f = (KrigInfo["y_mean"] + KrigInfo["y_std"] * f)
+
+    return f

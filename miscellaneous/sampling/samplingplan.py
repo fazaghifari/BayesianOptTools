@@ -41,9 +41,9 @@ def sampling(option,nvar,nsamp,**kwargs):
 
 def realval(lb,ub,samp):
     if len(ub) != len(lb):
-        raise NameError("Lower and upper bound have to be in the same dimension")
+        raise ValueError("Lower and upper bound have to be in the same dimension")
     if len(ub) != np.size(samp,axis=1):
-        raise NameError("sample and bound are not in the same dimension")
+        raise ValueError("sample and bound are not in the same dimension")
     ndim = len(ub)
     nsamp = np.size(samp,axis=0)
     realsamp = np.zeros(shape=[nsamp,ndim])
