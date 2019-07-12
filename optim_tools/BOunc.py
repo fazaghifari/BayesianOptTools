@@ -361,7 +361,8 @@ def simultpred(multiupdate,KrigNewMultiInfotemp,BayesMultiInfo,KrigScalarizedInf
         Y = KrigNewMultiInfotemp["y"]
         Y = np.hstack((Y[0], Y[1]))
         KrigNewMultiInfotemp["X_norm"], y_normtemp = standardize(KrigNewMultiInfotemp["X"], Y, type="default", normy= True,
-                                                     range=np.vstack((np.hstack((KrigNewMultiInfotemp["lb"],np.min(Y,0))),np.hstack((KrigNewMultiInfotemp["ub"],np.max(Y,0))))))
+                                                     range=np.vstack((np.hstack((KrigNewMultiInfotemp["lb"],np.min(Y,0))),
+                                                                      np.hstack((KrigNewMultiInfotemp["ub"],np.max(Y,0))))))
 
         KrigNewMultiInfotemp["y_norm"][0] = y_normtemp[:,0]
         KrigNewMultiInfotemp["y_norm"][1] = y_normtemp[:,1]
@@ -374,6 +375,7 @@ def simultpred(multiupdate,KrigNewMultiInfotemp,BayesMultiInfo,KrigScalarizedInf
             KrigNewMultiInfotemp["num"] = jj
             xinput = np.hstack((KrigNewMultiInfotemp["Theta"][jj],np.log10(KrigNewMultiInfotemp["SigmaSqr"][jj]) ))
             KrigNewMultiInfotemp = likelihood(xinput, KrigNewMultiInfotemp, retresult="all")
+            
         yalltemp = np.vstack((yalltemp, yprednext))
         Xalltemp = np.vstack((Xalltemp, xnext))
         ypartemp, _ = searchpareto.paretopoint(yalltemp)

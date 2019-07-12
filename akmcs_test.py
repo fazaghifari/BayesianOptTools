@@ -10,13 +10,15 @@ n_krigsamp = 50
 problem = "hidimenra"
 
 # Monte Carlo Sampling
-init_samp = AKMCS.mcpopgen(type="gaussian",sigma=0.2,ndim=nvar,n_order=5,n_coeff=3)
-init_krigsamp = 1.5*np.random.randn(n_krigsamp,2)
+init_samp = AKMCS.mcpopgen(type="gaussian",sigma=0.2,ndim=nvar,n_order=5,n_coeff=3,mu=0)
+init_samp = np.exp(init_samp)
+init_krigsamp = 1.5*np.random.randn(n_krigsamp,nvar)
+init_krigsamp = np.exp(init_krigsamp)
 ykrig = evaluate(init_krigsamp, type= problem)
 
 init_samp_G = evaluate(init_samp, type= problem)
 total_samp = np.hstack((init_samp,init_samp_G)).transpose()
-positive_samp = total_samp[:,total_samp[2]>= 0]
+positive_samp = total_samp[:,total_samp[nvar]>= 0]
 positive_samp = positive_samp.transpose()
 nsamp = np.size(init_samp,0)
 npos = np.size(positive_samp,0)

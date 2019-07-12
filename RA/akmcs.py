@@ -136,10 +136,10 @@ def LFU(initsamp,Gx,sigmaG):
     xmin = initsamp[minUloc,:]
     return (minU,xmin,U)
 
-def mcpopgen(lb=None,ub=None,n_order=6,n_coeff=1,type="random",sigma=1,ndim=2):
+def mcpopgen(lb=None,ub=None,n_order=6,n_coeff=1,type="random",sigma=1,ndim=2,mu=0):
     nmc = int(n_coeff*10**n_order)
     if type.lower()== "gaussian":
-        pop = sigma*np.random.randn(nmc,ndim)
+        pop = sigma*np.random.randn(nmc,ndim)+mu
     elif type.lower() == "lognormal":
         pop = np.random.lognormal(0,sigma)
     elif type.lower()== "random":
