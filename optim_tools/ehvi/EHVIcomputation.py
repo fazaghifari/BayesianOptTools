@@ -3,34 +3,73 @@ from miscellaneous.surrogate_support.prediction import prediction
 from optim_tools.ehvi.exi2d import exi2d
 from testcase.analyticalfcn.cases import evaluate
 
-def ehvicalc(x,ypar,BayesMultiInfo,KrigNewMultiInfo):
+def ehvicalc(x,ypar,BayesMultiInfo,KrigNewMultiInfo,ConstInfo=None):
     """
-    ModelInfoKR{i} = Model Information of objective i
-    ObjectiveInfoKR{i} = Objective Information of objective i
+    Wrapper for EHVI calculation
+    :param x: Design Variables
+    :param ypar: Current Pareto Front
+    :param BayesMultiInfo: Structure(Dictionary) containing necessary information for multiobjective Bayesian optimization.
+    :param KrigNewMultiInfo: Structure(Dictionary) containing necessary information for multiobjective Kriging.
+    :return: Hypervolume value
+    """
+    HV = EHVI(x, ypar, BayesMultiInfo, KrigNewMultiInfo)
+    if ConstInfo == None:
+        pass
 
-    Input :
-        - x : Design variables
-        - ypar: Current Pareto front
-        - BayesMultiInfo: Structure(Dictionary) containing necessary information for multiobjective Bayesian optimization.
-        - KrigMultiInfo: Structure(Dictionary) containing necessary information for multiobjective Kriging.
+    elif ConstInfo["consttype"] == "tabulated":
+        coeff = tabulatedconst(ConstInfo,x)
+        HV = HV * coeff
+
+    return HV
+
+def EHVI(x,ypar,BayesMultiInfo,KrigNewMultiInfo):
     """
+        ModelInfoKR{i} = Model Information of objective i
+        ObjectiveInfoKR{i} = Objective Information of objective i
+
+        Input :
+            - x : Design variables
+            - ypar: Current Pareto front
+            - BayesMultiInfo: Structure(Dictionary) containing necessary information for multiobjective Bayesian optimization.
+            - KrigMultiInfo: Structure(Dictionary) containing necessary information for multiobjective Kriging.
+        """
 
     X = KrigNewMultiInfo["X"]
     nobj = len(KrigNewMultiInfo["y"])
-    nsamp = np.size(X,0)
-    YO = np.zeros(shape=[nsamp,nobj])
+    nsamp = np.size(X, 0)
+    YO = np.zeros(shape=[nsamp, nobj])
     RefP = BayesMultiInfo["refpoint"]
 
     # prediction of each objective
     pred = np.zeros(shape=[nobj])
     SSqr = np.zeros(shape=[nobj])
-    for ii in range(0,nobj):
-        pred[ii],SSqr[ii] = prediction(x, KrigNewMultiInfo, ["pred","SSqr"], num=ii)
+    for ii in range(0, nobj):
+        pred[ii], SSqr[ii] = prediction(x, KrigNewMultiInfo, ["pred", "SSqr"], num=ii)
 
     # Compute (negative of) hypervolume
-    HV = -1 * exi2d(ypar,RefP,pred,SSqr)
+    HV = -1 * exi2d(ypar, RefP, pred, SSqr)
 
-    if HV == 0: # give penalty to HV, to avoid error in CMA-ES when in an iteration produce all HV = 0
+    if HV == 0:  # give penalty to HV, to avoid error in CMA-ES when in an iteration produce all HV = 0
         HV = np.random.uniform(np.finfo("float").tiny, np.finfo("float").tiny * 100)
 
     return HV
+
+def tabulatedconst(ConstInfo,xnext):
+    # THIS FUNCTION IS NOT GENERAL, FOR NOW IT'S ONLY FOR POTSAWAT'S CASE
+    consttable = ConstInfo["constraint"]
+    thetaround = np.floor(xnext[1]*2)/2
+    result = np.where(consttable[:,0] == thetaround)
+    index = result[0][0]
+    betamax = consttable[index,1]
+    if xnext[1] == 11.41:
+        if xnext[2] <= 60.9564:
+            coeff = 1
+        else:
+            coeff = 0
+    else:
+        if xnext[2] <= betamax:
+            coeff = 1
+        else:
+            coeff = 0
+
+    return coeff

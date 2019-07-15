@@ -167,7 +167,7 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
                 if normy == True:
                     KrigInfo["X_norm"], y_normtemp = standardize(X, Y, type=standtype.lower(), normy=True, range=np.vstack((np.hstack((KrigInfo["lb"],np.min(Y,0))),np.hstack((KrigInfo["ub"],np.max(Y,0))))))
                     KrigInfo["norm_y"] = True
-                    KrigInfo["y_norm"][num] = y_normtemp[:,num]
+                    KrigInfo["y_norm"][num] = y_normtemp[:,num].reshape(-1,1)
                 else:
                     KrigInfo["X_norm"] = standardize(X, Y,type=standtype.lower(), range=np.vstack((KrigInfo["lb"],KrigInfo["ub"])))
                     KrigInfo["norm_y"] = False

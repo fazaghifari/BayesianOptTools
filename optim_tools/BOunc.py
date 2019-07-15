@@ -150,7 +150,8 @@ def sobounc(BayesInfo,KrigInfoBayes,auto=True,**kwargs):
 
     return (Xout, ybest, yhist, KrigNewInfo)
 
-def mobounc(BayesMultiInfo,KrigInfoBayesMulti,auto=True,multiupdate=0,**kwargs):
+
+def mobounc(BayesMultiInfo,KrigInfoBayesMulti,auto=True,multiupdate=0,ConstraintInfo=None,**kwargs):
     """
     Perform unconstrained multi-objective Bayesian optimization
 
@@ -253,27 +254,28 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti,auto=True,multiupdate=0,**kwargs):
             if BayesMultiInfo["refpointtype"].lower() == "dynamic":
                 BayesMultiInfo["refpoint"] = np.max(yall,0)+(np.max(yall,0)-np.min(yall,0))*2
 
+        # perform update
         # Perform one iteration of multi-objective Bayesian optimization
         if BayesMultiInfo["krignum"] == 1:
             xnext,ehvinext = run_acquifun_opt(BayesMultiInfo,KrigScalarizedInfo)
         else:
-            xnext,ehvinext = run_multi_acquifun_opt(BayesMultiInfo,KrigNewMultiInfo,ypar)
+            xnext,ehvinext = run_multi_acquifun_opt(BayesMultiInfo,KrigNewMultiInfo,ypar,ConstraintInfo)
 
-        # perform multi update
         if multiupdate == 0 or multiupdate == 1:
             pass
         else:
+            # perform multi update
             yalltemp = deepcopy(yall)
             Xalltemp = deepcopy(Xall)
             yprednext = np.zeros(shape=[len(KrigNewMultiInfo["y"])])
             KrigNewMultiInfotemp = deepcopy(KrigNewMultiInfo)
             Xalltemp, yalltemp = simultpred(multiupdate, KrigNewMultiInfotemp, BayesMultiInfo, KrigScalarizedInfo,
-                                            yprednext, xnext, yalltemp, Xalltemp)
+                                            yprednext, xnext, yalltemp, Xalltemp,ConstraintInfo)
             xnext = Xalltemp[-multiupdate:]
             ynextpredicted = yalltemp[-multiupdate:]
 
         # Break Loop if auto is False
-        if auto == False:
+        if auto is False:
             break
         else:
             pass
@@ -288,7 +290,7 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti,auto=True,multiupdate=0,**kwargs):
 
         # Give treatment to failed solutions, Reference : "Forrester, A. I., SÃ³bester, A., & Keane, A. J. (2006). Optimization with missing data.
         # Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences, 462(2067), 935-945."
-        if math.isnan(ynext.any()) == True:
+        if math.isnan(ynext.any()) is True:
             for jj in range(0,len(KrigInfoBayesMulti["y"])):
                 if BayesMultiInfo.krignum == 1:
                     KrigNewMultiInfo = kriging(KrigNewMultiInfo,standardization=True,num=jj)
@@ -348,8 +350,9 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti,auto=True,multiupdate=0,**kwargs):
 
     return (Xout, yout, KrigNewMultiInfo)
 
-def simultpred(multiupdate,KrigNewMultiInfotemp,BayesMultiInfo,KrigScalarizedInfo,yprednext,xnext,yalltemp,Xalltemp):
+def simultpred(multiupdate,KrigNewMultiInfotemp,BayesMultiInfo,KrigScalarizedInfo,yprednext,xnext,yalltemp,Xalltemp,ConstraintInfo):
     for ii in range(0, multiupdate):
+        BayesMultiInfo["constsatisfied"] = False
         KrigNewMultiInfotemp["X"] = np.vstack((KrigNewMultiInfotemp["X"], xnext))
         bound = np.vstack((- np.ones(shape=[1, KrigNewMultiInfotemp["nvar"]]),
                            np.ones(shape=[1, KrigNewMultiInfotemp["nvar"]])))
@@ -364,8 +367,8 @@ def simultpred(multiupdate,KrigNewMultiInfotemp,BayesMultiInfo,KrigScalarizedInf
                                                      range=np.vstack((np.hstack((KrigNewMultiInfotemp["lb"],np.min(Y,0))),
                                                                       np.hstack((KrigNewMultiInfotemp["ub"],np.max(Y,0))))))
 
-        KrigNewMultiInfotemp["y_norm"][0] = y_normtemp[:,0]
-        KrigNewMultiInfotemp["y_norm"][1] = y_normtemp[:,1]
+        KrigNewMultiInfotemp["y_norm"][0] = y_normtemp[:,0].reshape(-1,1)
+        KrigNewMultiInfotemp["y_norm"][1] = y_normtemp[:,1].reshape(-1,1)
         for jj in range(0, len(KrigNewMultiInfotemp["y"])):
             KrigNewMultiInfotemp["F"][jj] = compute_regression_mat(KrigNewMultiInfotemp["idx"][jj],
                                                                    KrigNewMultiInfotemp["X_norm"], bound,
@@ -375,13 +378,14 @@ def simultpred(multiupdate,KrigNewMultiInfotemp,BayesMultiInfo,KrigScalarizedInf
             KrigNewMultiInfotemp["num"] = jj
             xinput = np.hstack((KrigNewMultiInfotemp["Theta"][jj],np.log10(KrigNewMultiInfotemp["SigmaSqr"][jj]) ))
             KrigNewMultiInfotemp = likelihood(xinput, KrigNewMultiInfotemp, retresult="all")
-            
+
         yalltemp = np.vstack((yalltemp, yprednext))
         Xalltemp = np.vstack((Xalltemp, xnext))
         ypartemp, _ = searchpareto.paretopoint(yalltemp)
+
         if BayesMultiInfo["krignum"] == 1:
             xnext, ehvinext = run_acquifun_opt(BayesMultiInfo, KrigScalarizedInfo)
         else:
-            xnext, ehvinext = run_multi_acquifun_opt(BayesMultiInfo, KrigNewMultiInfotemp, ypartemp)
+            xnext, ehvinext = run_multi_acquifun_opt(BayesMultiInfo, KrigNewMultiInfotemp, ypartemp, ConstraintInfo)
 
     return (Xalltemp,yalltemp)

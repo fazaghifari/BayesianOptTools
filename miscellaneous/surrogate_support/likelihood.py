@@ -65,7 +65,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
             X = KrigInfo["X_norm"]
             F = KrigInfo["F"][num]
             if KrigInfo["norm_y"] == True:
-                y = np.array([KrigInfo["y_norm"][num]]).transpose()
+                y = KrigInfo["y_norm"][num]
             else:
                 y = np.array(KrigInfo["y"][num])
         if KrigInfo["type"].lower() == "kpls":

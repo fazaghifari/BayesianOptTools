@@ -10,7 +10,7 @@ import time
 from matplotlib import pyplot as plt
 
 nvar = 2
-nsample = 30
+nsample = 20
 nobj = 2
 KrigMultiInfo = dict()
 BayesMultiInfo = dict()
@@ -40,7 +40,7 @@ KrigMultiInfo["nugget"] = -6
 KrigMultiInfo["nkernel"] = len(KrigMultiInfo["kernel"])
 
 #Set Bayesian Optimization info
-BayesMultiInfo["nup"] = 3
+BayesMultiInfo["nup"] = 0
 BayesMultiInfo["nrestart"] = 10
 BayesMultiInfo["acquifunc"] = "ehvi"
 BayesMultiInfo["acquifuncopt"] = "fmincon"
@@ -55,5 +55,5 @@ xbest, ybest, KrigNewMultiInfo = mobounc(BayesMultiInfo,KrigMultiInfo,normalize_
 
 plt.scatter(y[:,0],y[:,1])
 plt.scatter(KrigMultiInfo["y"][0][nsample:,0],KrigMultiInfo["y"][1][nsample:,0])
-plt.scatter(ybest[:,0],ybest[:,1])
+# plt.scatter(ybest[:,0],ybest[:,1])
 plt.show()

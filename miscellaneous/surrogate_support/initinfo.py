@@ -118,7 +118,7 @@ def init_kriginfo(objectives=1):
         raise ValueError("The number of objectives must be 1 or greater.")
 
     multikeys = ['y', 'lb', 'ub', 'Theta', 'U', 'Psi', 'BE', 'y_mean', 'y_std',
-                 'SigmaSqr', 'idx', 'F', 'wgkf', 'plscoeff']
+                 'SigmaSqr', 'idx', 'F', 'wgkf', 'plscoeff', 'y_norm']
     for key in multikeys:
         KrigInfo[key] = [0] * objectives
 
@@ -162,7 +162,7 @@ def copymultiKrigInfo(KrigMultiInfo, num):
     KrigNewInfo['lb'] = KrigMultiInfo['lb']
     KrigNewInfo['kernel'] = KrigMultiInfo['kernel']
     KrigNewInfo['nugget'] = KrigMultiInfo['nugget']
-    keys = ['Theta', 'U', 'Psi', 'BE', 'y_mean', 'y_std', 'SigmaSqr', 'idx', 'F', 'wgkf', 'plscoeff']
+    keys = ['Theta', 'U', 'Psi', 'BE', 'y_mean', 'y_std', 'SigmaSqr', 'idx', 'F', 'wgkf', 'plscoeff', 'y_norm']
     for key in keys:
         KrigNewInfo[key] = KrigMultiInfo[key][num]
 
