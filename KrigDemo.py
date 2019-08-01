@@ -46,7 +46,7 @@ KrigInfo["optimizer"] = "slsqp"
 
 #Run Kriging
 t = time.time()
-myKrig = kpls(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
+myKrig = kriging(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
 elapsed = time.time() - t
 print("elapsed time for train Kriging model: ", elapsed,"s")
 # print("LOOCV Error Kriging : ", KrigInfo["LOOCVerror"], " % (MAPE)")
@@ -64,7 +64,7 @@ Xeval[:,1] = np.reshape(Xevaly,(neval))
 #Evaluate output
 yeval = np.zeros(shape=[neval,1])
 yact = np.zeros(shape=[neval,1])
-yeval= prediction(Xeval,KrigInfo,"pred")
+yeval = prediction(Xeval,KrigInfo, 'pred')
 yact = evaluate(Xeval,"branin")
 hasil = np.hstack((yeval,yact))
 
