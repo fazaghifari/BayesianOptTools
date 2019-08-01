@@ -1,4 +1,5 @@
 import numpy as np
+import multiprocessing as mp
 from copy import deepcopy
 from miscellaneous.surrogate_support import likelihood
 from miscellaneous.surrogate_support.krigloocv import loocv
@@ -293,25 +294,50 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
             if disp == True:
                 print("Hyperparam training is repeated for ",KrigInfo['nrestart']," time(s)")
 
-            for ii in range(0,KrigInfo['nrestart']):
-                if disp == True:
-                    print("hyperparam training attempt number ",ii+1)
+            try:
+                n_cpu = mp.cpu_count()
+                skip_mp = False
+            except NotImplementedError:
+                # No idea how many cores so just run sequentially
+                skip_mp = True
 
-                xhyp_ii = xhyp[ii, :]
+            if skip_mp:
+                # Calculate hyperparams sequentially
+                for ii in range(KrigInfo['nrestart']):
+                    if disp:
+                        print(f'Training hyperparameter {ii + 1}')
 
-                bestxcand_ii, neglnlikecand_ii = tune_hyperparameters(KrigInfo, num, xhyp_ii, ubhyp, lbhyp, sigmacmaes,
-                                                                      scaling, lbfgsbbound, constraints)
+                    xhyp_ii = xhyp[ii, :]
+                    bestxcand_ii, neglnlikecand_ii = tune_hyperparameters(KrigInfo, num, xhyp_ii, ubhyp, lbhyp, sigmacmaes,
+                                                                          scaling, lbfgsbbound, constraints)
+                    bestxcand[ii, :] = bestxcand_ii
+                    neglnlikecand[ii] = neglnlikecand_ii
+                    print(f'i: {ii}, bestxcand_ii: {bestxcand_ii}, neglnlikecand_ii: {neglnlikecand_ii}')
+                    if disp:
+                        print(" ")
+            else:
+                # Calculate hyperparams in parallel
+                if disp:
+                    print(f"Training {KrigInfo['nrestart']} hyperparameters "
+                          f"on {n_cpu} available cores.")
 
-                bestxcand[ii, :] = bestxcand_ii
-                neglnlikecand[ii] = neglnlikecand_ii
+                hyperparam_inputs = []
+                for ii in range(KrigInfo['nrestart']):
+                    xhyp_ii = xhyp[ii, :]
+                    hyperparam_inputs.append((KrigInfo, num, xhyp_ii, ubhyp, lbhyp, sigmacmaes, scaling, lbfgsbbound, constraints))
 
-                if disp == True:
-                    print(" ")
+                with mp.Pool(n_cpu) as pool:
+                    results = pool.starmap(tune_hyperparameters, hyperparam_inputs)
+
+                # Collate results back into numpy arrays
+                for i, (bestxcand_ii, neglnlikecand_ii) in enumerate(results):
+                    bestxcand[i] = bestxcand_ii
+                    neglnlikecand[i] = neglnlikecand_ii
 
             I = np.argmin(neglnlikecand)
             best_x = bestxcand[I, :]
 
-        if disp == True:
+        if disp:
             print("Single Objective, train hyperparam, end.")
             print("Best hyperparameter is ", best_x)
             print("With NegLnLikelihood of ", neglnlikecand[I])
