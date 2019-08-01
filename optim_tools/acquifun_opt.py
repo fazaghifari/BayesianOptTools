@@ -5,6 +5,7 @@ from scipy.optimize import minimize
 from optim_tools.ehvi.EHVIcomputation import ehvicalc
 import cma
 
+
 def run_acquifun_opt(BayesInfo, KrigNewInfo, **kwargs):
     """
      Run the optimization of acquisition to find the next sampling point.
@@ -30,7 +31,6 @@ def run_acquifun_opt(BayesInfo, KrigNewInfo, **kwargs):
 
     if BayesInfo["acquifunc"].lower() == "lcb":
         KrigNewInfo["sigmalcb"] = BayesInfo["sigmalcb"]
-    pass
 
     if KrigNewConInfo.any() == None:
         probtype = 1 #Unconstrained problem
@@ -58,7 +58,8 @@ def run_acquifun_opt(BayesInfo, KrigNewInfo, **kwargs):
             else:
                 conacquifuncval = acquifuncval*np.prod(PoF,1)
             I = np.argmin(conacquifuncval)
-            res = minimize(constrainedacqfun,Xrand[I,:],method='L-BFGS-B',bounds=lbfgsbbound,args=(KrigNewInfo,KrigNewConInfo,acquifunc))
+            res = minimize(constrainedacqfun,Xrand[I,:],method='L-BFGS-B',bounds=lbfgsbbound,
+                           args=(KrigNewInfo,KrigNewConInfo,acquifunc))
             xnext = res.x
             fnext = res.fun
             pass
@@ -72,7 +73,11 @@ def run_acquifun_opt(BayesInfo, KrigNewInfo, **kwargs):
         scaling = sigmacmaestemp/sigmacmaes
         if probtype == 1:
             I = np.argmin(acquifuncval)
-            xnext,es = cma.fmin2(prediction,Xrand[I,:],sigmacmaes,{'BoundaryHandler': cma.BoundPenalty,'bounds': [KrigNewInfo["lb"].tolist(), KrigNewInfo["ub"].tolist()], 'scaling_of_variables':scaling,'verb_disp': 0,'verbose': -9},args=(KrigNewInfo,acquifunc))
+            xnext,es = cma.fmin2(prediction,Xrand[I,:],sigmacmaes,{'BoundaryHandler': cma.BoundPenalty,
+                                                                   'bounds': [KrigNewInfo["lb"].tolist(),
+                                                                              KrigNewInfo["ub"].tolist()],
+                                                                   'scaling_of_variables':scaling,'verb_disp': 0,
+                                                                   'verbose': -9},args=(KrigNewInfo,acquifunc))
             fnext = es.result[1]
         elif probtype == 2:
             PoF = np.empty(shape=[nmcs, ncon])
@@ -83,7 +88,10 @@ def run_acquifun_opt(BayesInfo, KrigNewInfo, **kwargs):
             else:
                 conacquifuncval = acquifuncval*np.prod(PoF,1)
             I = np.argmin(conacquifuncval)
-            xnext,es = cma.fmin2(constrainedacqfun,Xrand[I,:],sigmacmaes,{'BoundaryHandler': cma.BoundPenalty,'bounds': [KrigNewInfo["lb"].tolist(), KrigNewInfo["ub"].tolist()],'verbose': -9},args=(KrigNewInfo,KrigNewConInfo,acquifunc))
+            xnext,es = cma.fmin2(constrainedacqfun,Xrand[I,:],sigmacmaes,
+                                 {'BoundaryHandler': cma.BoundPenalty,
+                                  'bounds': [KrigNewInfo["lb"].tolist(), KrigNewInfo["ub"].tolist()],'verbose': -9},
+                                 args=(KrigNewInfo,KrigNewConInfo,acquifunc))
             fnext = es.result[1]
 
     elif acquifuncopt.lower() == "cmaes":
@@ -94,10 +102,16 @@ def run_acquifun_opt(BayesInfo, KrigNewInfo, **kwargs):
         sigmacmaes = np.max(sigmacmaestemp)
         for im in range(0,BayesInfo["nrestart"]):
             if probtype == 1:
-                xnextcand[im,:],es = cma.fmin2(prediction,Xrand[im,:],sigmacmaes,{'BoundaryHandler': cma.BoundPenalty,'bounds': [KrigNewInfo["lb"].tolist(), KrigNewInfo["ub"].tolist()], 'verb_disp': 0,'verbose': -9},args=(KrigNewInfo,acquifunc))
+                xnextcand[im,:],es = cma.fmin2(prediction,Xrand[im,:],sigmacmaes,
+                                               {'BoundaryHandler': cma.BoundPenalty,
+                                                'bounds': [KrigNewInfo["lb"].tolist(), KrigNewInfo["ub"].tolist()],
+                                                'verb_disp': 0,'verbose': -9},args=(KrigNewInfo,acquifunc))
                 fnextcand[im] = es.result[1]
             elif probtype == 2:
-                xnextcand[im,:],es = cma.fmin2(constrainedacqfun,Xrand[im,:],sigmacmaes,{'BoundaryHandler': cma.BoundPenalty,'bounds': [KrigNewInfo["lb"].tolist(), KrigNewInfo["ub"].tolist()]},args=(KrigNewInfo,KrigNewConInfo,acquifunc))
+                xnextcand[im,:],es = cma.fmin2(constrainedacqfun,Xrand[im,:],sigmacmaes,
+                                               {'BoundaryHandler': cma.BoundPenalty,
+                                                'bounds': [KrigNewInfo["lb"].tolist(), KrigNewInfo["ub"].tolist()]},
+                                               args=(KrigNewInfo,KrigNewConInfo,acquifunc))
                 fnextcand[im] = es.result[1]
         I = np.argmin(fnextcand)
         xnext = xnextcand[I,:]
@@ -114,7 +128,8 @@ def run_acquifun_opt(BayesInfo, KrigNewInfo, **kwargs):
                 xnextcand[im,:] = res.x
                 fnextcand[im] = res.fun
             elif probtype == 2:
-                res = minimize(constrainedacqfun,Xrand[im,:],method='L-BFGS-B',bounds=lbfgsbbound,args=(KrigNewInfo,KrigNewConInfo,acquifunc))
+                res = minimize(constrainedacqfun,Xrand[im,:],method='L-BFGS-B',bounds=lbfgsbbound,
+                               args=(KrigNewInfo,KrigNewConInfo,acquifunc))
                 xnextcand[im, :] = res.x
                 fnextcand[im] = res.fun
         I = np.argmin(fnextcand)
@@ -124,7 +139,8 @@ def run_acquifun_opt(BayesInfo, KrigNewInfo, **kwargs):
 
     return (xnext,fnext)
 
-def constrainedacqfun(x,KrigNewInfo,KrigNewConInfo,acquifunc):
+
+def constrainedacqfun(x, KrigNewInfo, KrigNewConInfo, acquifunc):
     #Calculate unconstrained acquisition function
     acquifuncval = prediction(x,KrigNewInfo,acquifunc)
 
@@ -142,6 +158,7 @@ def constrainedacqfun(x,KrigNewInfo,KrigNewConInfo,acquifunc):
     pass
 
     return conacquifuncval
+
 
 def run_multi_acquifun_opt(BayesMultiInfo, KrigNewMultiInfo, ypar, ConstInfo=None,**kwargs):
     """
@@ -163,7 +180,7 @@ def run_multi_acquifun_opt(BayesMultiInfo, KrigNewMultiInfo, ypar, ConstInfo=Non
     acquifuncopt = BayesMultiInfo["acquifuncopt"]
     acquifunc = BayesMultiInfo["acquifunc"]
 
-    if KrigNewConInfo.all() == None:
+    if KrigNewConInfo.all() is None:
         probtype = 1 # Unconstrained problem
     else:
         probtype = 2 # Constrained problem
@@ -175,34 +192,53 @@ def run_multi_acquifun_opt(BayesMultiInfo, KrigNewMultiInfo, ypar, ConstInfo=Non
         pass
 
     if acquifuncopt.lower() == "cmaes":
-        Xrand = realval(KrigNewMultiInfo["lb"], KrigNewMultiInfo["ub"], np.random.rand(BayesMultiInfo["nrestart"], KrigNewMultiInfo["nvar"]))
+        Xrand = realval(KrigNewMultiInfo["lb"], KrigNewMultiInfo["ub"], np.random.rand(BayesMultiInfo["nrestart"],
+                                                                                       KrigNewMultiInfo["nvar"]))
         xnextcand = np.zeros(shape=[BayesMultiInfo["nrestart"], KrigNewMultiInfo["nvar"]])
         fnextcand = np.zeros(shape=[BayesMultiInfo["nrestart"]])
         sigmacmaes = (KrigNewMultiInfo["ub"] - KrigNewMultiInfo["lb"]) / 6
+
         for im in range(0,BayesMultiInfo["nrestart"]):
             if probtype == 1:# For unconstrained problem
-                xnextcand[im,:],es = cma.fmin2(acqufunhandle,Xrand[im,:],sigmacmaes,{'BoundaryHandler': cma.BoundPenalty,'bounds': [KrigNewMultiInfo["lb"].tolist(), KrigNewMultiInfo["ub"].tolist()],'verb_disp': 0,'verbose': -9},args=(ypar,BayesMultiInfo,KrigNewMultiInfo,ConstInfo))
+                xnextcand[im,:],es = cma.fmin2(acqufunhandle,Xrand[im,:],sigmacmaes,
+                                               {'BoundaryHandler': cma.BoundPenalty,
+                                                'bounds': [KrigNewMultiInfo["lb"].tolist(),
+                                                           KrigNewMultiInfo["ub"].tolist()],
+                                                'verb_disp': 0,'verbose': -9},
+                                               args=(ypar,BayesMultiInfo,KrigNewMultiInfo,ConstInfo))
                 fnextcand[im] = es.result[1]
             elif probtype == 2: # For constrained problem (on progress)
-                xnextcand[im,:],es = cma.fmin2(acqufunhandle,Xrand[im,:],sigmacmaes,{'BoundaryHandler': cma.BoundPenalty,'bounds': [KrigNewMultiInfo["lb"].tolist(), KrigNewMultiInfo["ub"].tolist()],'verb_disp': 0,'verbose': -9},args=(ypar,BayesMultiInfo,KrigNewMultiInfo,ConstInfo))
+                xnextcand[im,:],es = cma.fmin2(acqufunhandle,Xrand[im,:],sigmacmaes,
+                                               {'BoundaryHandler': cma.BoundPenalty,
+                                                'bounds': [KrigNewMultiInfo["lb"].tolist(),
+                                                           KrigNewMultiInfo["ub"].tolist()],
+                                                'verb_disp': 0,'verbose': -9},
+                                               args=(ypar,BayesMultiInfo,KrigNewMultiInfo,ConstInfo))
                 fnextcand[im] = es.result[1]
+
         I = np.argmin(fnextcand)
         xnext = xnextcand[I,:]
         fnext = fnextcand[I]
     elif acquifuncopt.lower() == "fmincon":
-        Xrand = realval(KrigNewMultiInfo["lb"], KrigNewMultiInfo["ub"], np.random.rand(BayesMultiInfo["nrestart"], KrigNewMultiInfo["nvar"]))
+
+        Xrand = realval(KrigNewMultiInfo["lb"], KrigNewMultiInfo["ub"], np.random.rand(BayesMultiInfo["nrestart"],
+                                                                                       KrigNewMultiInfo["nvar"]))
         xnextcand = np.zeros(shape=[BayesMultiInfo["nrestart"], KrigNewMultiInfo["nvar"]])
         fnextcand = np.zeros(shape=[BayesMultiInfo["nrestart"]])
         lbfgsbbound = np.hstack((KrigNewMultiInfo["lb"].reshape(-1, 1), KrigNewMultiInfo["ub"].reshape(-1, 1)))
+
         for im in range(0,BayesMultiInfo["nrestart"]):
             if probtype == 1:# For unconstrained problem
-                res = minimize(acqufunhandle,Xrand[im,:],method='L-BFGS-B',bounds=lbfgsbbound,args=(ypar,BayesMultiInfo,KrigNewMultiInfo,ConstInfo))
+                res = minimize(acqufunhandle,Xrand[im,:],method='L-BFGS-B',bounds=lbfgsbbound,
+                               args=(ypar,BayesMultiInfo,KrigNewMultiInfo,ConstInfo))
                 xnextcand[im,:] = res.x
                 fnextcand[im] = res.fun
             elif probtype == 2: # For constrained problem (on progress)
-                res = minimize(acqufunhandle,Xrand[im,:],method='L-BFGS-B',bounds=lbfgsbbound,args=(ypar,BayesMultiInfo,KrigNewMultiInfo,ConstInfo))
+                res = minimize(acqufunhandle,Xrand[im,:],method='L-BFGS-B',bounds=lbfgsbbound,
+                               args=(ypar,BayesMultiInfo,KrigNewMultiInfo,ConstInfo))
                 xnextcand[im, :] = res.x
                 fnextcand[im] = res.fun
+
         I = np.argmin(fnextcand)
         xnext = xnextcand[I, :]
         fnext = fnextcand[I]

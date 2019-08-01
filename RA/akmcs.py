@@ -56,7 +56,20 @@ def akmcs(KrigInfo,akmcsInfo):
         raise ValueError("Kriging Model not available.")
 
     # Predict all Monte Carlo Samples
-    Gx,sigmaG = prediction(init_samp, KrigInfo, ["pred","s"])
+    nsamp = np.size(init_samp, axis=0)
+    Gx = np.zeros(shape=[nsamp,1])
+    sigmaG = np.zeros(shape=[nsamp, 1])
+    # Gx,sigmaG = prediction(init_samp, KrigInfo, ["pred","s"])
+
+    #SPLIT INIT_SAMP TO AVOID MEMORY ERROR
+    run_times = int(np.ceil(nsamp/10000))
+    for i in range(run_times):
+        start = i*10000
+        stop = (i+1)*10000
+        if i != run_times - 1:
+            Gx[start:stop,:],sigmaG[start:stop,:] = prediction(init_samp[start:stop,:], KrigInfo, ["pred","s"])
+        else:
+            Gx[start:, :], sigmaG[start:, :] = prediction(init_samp[start:, :], KrigInfo, ["pred", "s"])
 
     # Calculate Prob of Failure
     Pf = pf(Gx,init_samp)
@@ -136,12 +149,15 @@ def LFU(initsamp,Gx,sigmaG):
     xmin = initsamp[minUloc,:]
     return (minU,xmin,U)
 
-def mcpopgen(lb=None,ub=None,n_order=6,n_coeff=1,type="random",sigma=1,ndim=2,mu=0):
+def mcpopgen(lb=None,ub=None,n_order=6,n_coeff=1,type="random",ndim=2,stddev=1,mean=0):
     nmc = int(n_coeff*10**n_order)
     if type.lower()== "gaussian":
-        pop = sigma*np.random.randn(nmc,ndim)+mu
+        pop = stddev*np.random.randn(nmc,ndim)+mean
     elif type.lower() == "lognormal":
-        pop = np.random.lognormal(0,sigma)
+        var = stddev**2
+        sigma = np.sqrt(np.log(var/(mean**2)+1))
+        mu = np.log((mean**2)/np.sqrt(var + mean**2))
+        pop = np.exp(sigma*np.random.randn(nmc,ndim)+mu)
     elif type.lower()== "random":
         if lb.any() == None or ub.any() == None:
             raise ValueError("type 'random' is selected, please input lower bound and upper bound value")

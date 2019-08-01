@@ -188,6 +188,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         KrigInfo["Psi"][num] = np.array(Psi)
         KrigInfo["BE"][num] = np.array(BE)
         KrigInfo["SigmaSqr"][num] = SigmaSqr
+        KrigInfo["NegLnLike"][num] = NegLnLike
 
     if mode.lower() == "default":
         return NegLnLike

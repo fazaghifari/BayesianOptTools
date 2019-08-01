@@ -218,11 +218,12 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
             best_x = bestxcand[I, :]
 
         KrigInfo["Theta"][num] = best_x
+        # KrigInfo["Theta"][0] = np.array([-0.5141237,0.01427119,-0.74552906,np.log10(0.01466474912597624)])
         if disp == True:
             print("Multi Objective, train hyperparam, end.")
             print("Best hyperparameter is ", best_x)
             print("With NegLnLikelihood of ", neglnlikecand[I])
-        KrigInfo= likelihood.likelihood(best_x,KrigInfo,retresult="all",num=num)
+        KrigInfo= likelihood.likelihood(KrigInfo["Theta"][num],KrigInfo,retresult="all",num=num)
         U = KrigInfo["U"][num]
         Psi = KrigInfo["U"][num]
 

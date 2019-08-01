@@ -37,6 +37,8 @@ KrigMultiInfo["ub"]= ub
 KrigMultiInfo["lb"]= lb
 KrigMultiInfo["kernel"] = kernel
 KrigMultiInfo["nugget"] = -6
+KrigMultiInfo["LOOCVerror"] = [0] * nobj
+KrigMultiInfo["LOOCVpred"] = [0] * nobj
 KrigMultiInfo["nkernel"] = len(KrigMultiInfo["kernel"])
 
 #Set Bayesian Optimization info
@@ -48,8 +50,8 @@ BayesMultiInfo["acquifuncopt"] = "fmincon"
 #Create Kriging
 myKrig = [0]*2
 for kk in range(0,2):
-    myKrig[kk] = kriging(KrigMultiInfo,standardization=True,normtype="default",normalize_y=True,disp=True,num=kk)
-
+    myKrig[kk] = kriging(KrigMultiInfo,standardization=True,normtype="default",normalize_y=True,disp=True,num=kk,loocvcalc=True)
+    print("LOOCV Error Kriging ",kk,": ",KrigMultiInfo["LOOCVerror"][kk]," % (MAPE)")
 #Run Bayesian Optimization
 xbest, ybest, KrigNewMultiInfo = mobounc(BayesMultiInfo,KrigMultiInfo,normalize_y=True,multiupdate=5)
 
