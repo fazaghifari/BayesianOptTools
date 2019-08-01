@@ -64,7 +64,7 @@ Xeval[:,1] = np.reshape(Xevaly,(neval))
 #Evaluate output
 yeval = np.zeros(shape=[neval,1])
 yact = np.zeros(shape=[neval,1])
-yeval= prediction(Xeval,KrigInfo,"pred")
+yeval = prediction(Xeval,KrigInfo, 'pred')
 yact = evaluate(Xeval,"branin")
 hasil = np.hstack((yeval,yact))
 
