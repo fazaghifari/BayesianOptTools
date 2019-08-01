@@ -291,16 +291,17 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
                 lbfgsbbound = None
                 constraints = None
 
-            if disp == True:
-                print("Hyperparam training is repeated for ",KrigInfo['nrestart']," time(s)")
+            if disp:
+                print(f"Training {KrigInfo['nrestart']} hyperparameter(s)")
 
+            # Try to identify number of core on machine fo multiprocessing
             try:
                 n_cpu = mp.cpu_count()
                 skip_mp = False
             except NotImplementedError:
                 # No idea how many cores so just run sequentially
                 skip_mp = True
-
+            skip_mp = True
             if skip_mp:
                 # Calculate hyperparams sequentially
                 for ii in range(KrigInfo['nrestart']):
@@ -308,26 +309,29 @@ def kriging (KrigInfo,loocvcalc=False,**kwargs):
                         print(f'Training hyperparameter {ii + 1}')
 
                     xhyp_ii = xhyp[ii, :]
-                    bestxcand_ii, neglnlikecand_ii = tune_hyperparameters(KrigInfo, num, xhyp_ii, ubhyp, lbhyp, sigmacmaes,
-                                                                          scaling, lbfgsbbound, constraints)
+                    p = (KrigInfo, num, xhyp_ii, ubhyp, lbhyp, sigmacmaes,
+                         scaling, lbfgsbbound, constraints)
+                    bestxcand_ii, neglnlikecand_ii = tune_hyperparameters(*p)
                     bestxcand[ii, :] = bestxcand_ii
                     neglnlikecand[ii] = neglnlikecand_ii
-                    print(f'i: {ii}, bestxcand_ii: {bestxcand_ii}, neglnlikecand_ii: {neglnlikecand_ii}')
+
                     if disp:
                         print(" ")
             else:
                 # Calculate hyperparams in parallel
                 if disp:
-                    print(f"Training {KrigInfo['nrestart']} hyperparameters "
-                          f"on {n_cpu} available cores.")
+                    print(f"Training in parallel on {n_cpu} available cores.")
 
                 hyperparam_inputs = []
                 for ii in range(KrigInfo['nrestart']):
                     xhyp_ii = xhyp[ii, :]
-                    hyperparam_inputs.append((KrigInfo, num, xhyp_ii, ubhyp, lbhyp, sigmacmaes, scaling, lbfgsbbound, constraints))
+                    hyperparam_inputs.append((KrigInfo, num, xhyp_ii, ubhyp,
+                                              lbhyp, sigmacmaes, scaling,
+                                              lbfgsbbound, constraints))
 
                 with mp.Pool(n_cpu) as pool:
-                    results = pool.starmap(tune_hyperparameters, hyperparam_inputs)
+                    results = pool.starmap(tune_hyperparameters,
+                                           hyperparam_inputs)
 
                 # Collate results back into numpy arrays
                 for i, (bestxcand_ii, neglnlikecand_ii) in enumerate(results):
@@ -371,7 +375,7 @@ def tune_hyperparameters(KrigInfo, num, xhyp_ii, ubhyp=None, lbhyp=None,
         constraints
 
     Returns:
-        bestxcand (float): Best x candidate
+        bestxcand (np.array(float)): Best x candidate array
         neglnlikecand (float): Negative ln-likelihood candidate
 
     Raises:
@@ -383,31 +387,37 @@ def tune_hyperparameters(KrigInfo, num, xhyp_ii, ubhyp=None, lbhyp=None,
             if p is None:
                 raise ValueError(f'{p} must be set if optimizer is cmaes.')
         bestxcand, es = cma.fmin2(likelihood.likelihood, xhyp_ii, sigmacmaes,
-                                  {'bounds': [lbhyp.tolist(), ubhyp.tolist()], 'scaling_of_variables': scaling,
-                                   'verb_disp': 0, 'verbose': -9}, args=(KrigInfo,))
+                                  {'bounds': [lbhyp.tolist(), ubhyp.tolist()],
+                                   'scaling_of_variables': scaling,
+                                   'verb_disp': 0, 'verbose': -9},
+                                  args=(KrigInfo,))
         neglnlikecand = es.result[1]
 
     elif KrigInfo["optimizer"] == "lbfgsb":
         if lbfgsbbound is None:
             raise ValueError('lbfgsbbound must be set if optimizer is lbfgsb.')
-        res = minimize(likelihood.likelihood, xhyp_ii, method='L-BFGS-B', bounds=lbfgsbbound, args=(KrigInfo, num))
+        res = minimize(likelihood.likelihood, xhyp_ii, method='L-BFGS-B',
+                       bounds=lbfgsbbound, args=(KrigInfo, num))
         bestxcand = res.x
         neglnlikecand = res.fun
 
     elif KrigInfo["optimizer"] == "slsqp":
         if lbfgsbbound is None:
             raise ValueError('lbfgsbbound must be set if optimizer is slsqp.')
-        res = minimize(likelihood.likelihood, xhyp_ii, method='SLSQP', bounds=lbfgsbbound, args=(KrigInfo, num))
+        res = minimize(likelihood.likelihood, xhyp_ii, method='SLSQP',
+                       bounds=lbfgsbbound, args=(KrigInfo, num))
         bestxcand = res.x
         neglnlikecand = res.fun
 
     elif KrigInfo["optimizer"] == "cobyla":
-        res = fmin_cobyla(likelihood.likelihood, xhyp_ii, constraints, rhobeg=0.5, rhoend=1e-4, args=(KrigInfo,))
+        res = fmin_cobyla(likelihood.likelihood, xhyp_ii, constraints,
+                          rhobeg=0.5, rhoend=1e-4, args=(KrigInfo,))
         bestxcand = res
         neglnlikecand = likelihood.likelihood(res, KrigInfo)
 
     else:
-        msg = f"KrigInfo['Optimizer'] = {KrigInfo['optimizer']} is not recognised."
+        msg = (f"{KrigInfo['optimizer']} in KrigInfo['Optimizer'] is not "
+               f"recognised.")
         raise KeyError(msg)
     return bestxcand, neglnlikecand
 
