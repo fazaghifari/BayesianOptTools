@@ -6,11 +6,14 @@ from surrogate_models.kriging import kriging, kpls
 from miscellaneous.surrogate_support.prediction import prediction
 from testcase.analyticalfcn.cases import evaluate
 from miscellaneous.surrogate_support.initinfo import initkriginfo,copymultiKrigInfo
+from miscellaneous.sampling.samplingplan import standardize
+from miscellaneous.surrogate_support.likelihood import likelihood
+from miscellaneous.surrogate_support.trendfunction import polytruncation, compute_regression_mat
 from optim_tools import searchpareto
 import math
 import scipy.io as sio
 
-def sobounc(BayesInfo,KrigInfoBayes,**kwargs):
+def sobounc(BayesInfo,KrigInfoBayes,auto=True,**kwargs):
     """
     Perform unconstrained single-objective Bayesian optimization
 
@@ -24,17 +27,31 @@ def sobounc(BayesInfo,KrigInfoBayes,**kwargs):
         yhist - History of best solution observed.
         KrigNewInfo - Structure containing information of final Kriging after optimization.
     """
+
     krigfun = kwargs.get('krigtype',kriging)
+    norm_y = kwargs.get('normalize_y', True)
     # Check necessary parameters
     if "nup" not in BayesInfo:
-        raise ValueError("Number of updates for Bayesian optimization, BayesInfo['nup'], is not specified")
+        if auto is True:
+            raise ValueError("Number of updates for Bayesian optimization, BayesInfo['nup'], is not specified")
+        else:
+            BayesInfo["nup"] = 1
+            print("Number of updates for Bayesian optimization has been set to 1")
 
     # Set default values
     if "stalliteration" not in BayesInfo:
-        BayesInfo["stalliteration"] = int(np.floor(BayesInfo["nsamp"]/2))
-        print("The number of stall iteration is not specified, set to nsamp/2.")
+        if auto is True:
+            BayesInfo["stalliteration"] = int(np.floor(BayesInfo["nsamp"]/2))
+            print("The number of stall iteration is not specified, set to nsamp/2.")
+        else:
+            BayesInfo["stalliteration"] = 1
+            print("Number of stall iteration for Bayesian optimization has been set to 1")
     else:
-        print("The number of stall iteration is specified to ", BayesInfo["stalliteration"]," by user")
+        if auto is True:
+            print("The number of stall iteration is specified to ", BayesInfo["stalliteration"]," by user")
+        else:
+            BayesInfo["stalliteration"] = 1
+            print("Number of stall iteration for Bayesian optimization has been set to 1")
 
     if "acquifunc" not in BayesInfo:
         BayesInfo["acquifunc"] = "EI"
@@ -75,11 +92,20 @@ def sobounc(BayesInfo,KrigInfoBayes,**kwargs):
     yhist = np.array([np.min(KrigNewInfo["y"])])
     istall = 0
     print("Begin Bayesian optimization process.")
-    print("Iteration: ",nup,", F-count: ",np.size(KrigNewInfo["X"],0)," Best f(x): ",yhist[nup]," Stall counter: ", istall)
+    if auto is True:
+        print("Iteration: ",nup,", F-count: ",np.size(KrigNewInfo["X"],0)," Best f(x): ",yhist[nup]," Stall counter: ", istall)
+    else:
+        pass
 
     while nup <= BayesInfo["nup"]:
         # Perform one iteration of single-objective Bayesian optimization
         xnext,_ = run_acquifun_opt(BayesInfo,KrigNewInfo)
+
+        # Break Loop if auto is False
+        if auto == False:
+            break
+        else:
+            pass
 
         # Evaluate new sample
         ynext = eval('evaluate(xnext,KrigNewInfo["problem"])')
@@ -94,7 +120,7 @@ def sobounc(BayesInfo,KrigInfoBayes,**kwargs):
         KrigNewInfo["X"] = np.vstack((KrigNewInfo["X"],xnext))
         KrigNewInfo["y"] = np.vstack((KrigNewInfo["y"],ynext))
         #Re-Create Kriging model
-        KrigNewInfo = krigfun(KrigNewInfo,standardization=True)
+        KrigNewInfo = krigfun(KrigNewInfo,standardization=True,normalize_y=norm_y)
 
         nup = nup+1
         yhist = np.vstack((yhist,np.min(KrigNewInfo["y"])))
@@ -112,11 +138,20 @@ def sobounc(BayesInfo,KrigInfoBayes,**kwargs):
     print("Optimization finished, now creating the final outputs.")
 
     I = np.argmin(KrigNewInfo["y"])
-    xbest = KrigNewInfo["X"][I,:]
     ybest = KrigNewInfo["y"][I,:]
-    return (xbest,ybest,yhist,KrigNewInfo)
+    if auto == True:
+        xbest = KrigNewInfo["X"][I, :]
+        Xout = xbest
+        print("The best feasible value is ", ybest)
+    else:
+        Xout = xnext
+        print("Suggested next sample: ",xnext,", F-count: ",np.size(KrigNewInfo["X"],0))
+        print("The current best value is ", ybest)
 
-def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
+    return (Xout, ybest, yhist, KrigNewInfo)
+
+
+def mobounc(BayesMultiInfo,KrigInfoBayesMulti,auto=True,multiupdate=0,ConstraintInfo=None,**kwargs):
     """
     Perform unconstrained multi-objective Bayesian optimization
 
@@ -129,9 +164,20 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
       Ybest - Matrix of responses of final non-dominated solutions after optimization.
       KrigNewMultiInfo - Nested structure containing information of final Kriging models after optimization.
     """
+    norm_y = kwargs.get('normalize_y', True)
     # Check necessary parameters
     if "nup" not in BayesMultiInfo:
-        raise ValueError("Number of updates for Bayesian optimization, BayesInfo['nup'], is not specified")
+        if auto is True:
+            raise ValueError("Number of updates for Bayesian optimization, BayesMultiInfo['nup'], is not specified")
+        else:
+            BayesMultiInfo["nup"] = 1
+            print("Number of updates for Bayesian optimization has been set to 1")
+    else:
+        if auto == True:
+            pass
+        else:
+            BayesMultiInfo["nup"] = 1
+            print("Manual mode is active, number of updates for Bayesian optimization is forced to 1")
 
     # Set default values
     if "acquifunc" not in BayesMultiInfo:
@@ -146,7 +192,7 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
 
     # Set necessary params for multiobjective acquisition function
     if BayesMultiInfo["acquifunc"].lower() == "ehvi":
-        BayesMultiInfo["krignum"] = np.size(KrigInfoBayesMulti["y"])
+        BayesMultiInfo["krignum"] = np.size(KrigInfoBayesMulti["y"],0)
         if "refpoint" not in BayesMultiInfo:
             BayesMultiInfo["refpointtype"] = 'dynamic'
     elif BayesMultiInfo["acquifunc"].lower() == "parego":
@@ -191,12 +237,15 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
     ypar,_ = searchpareto.paretopoint(yall)
 
     print("Begin multi-objective Bayesian optimization process.")
-    print("Iteration: ", nup,", F-count: ",np.size(KrigNewMultiInfo["X"],0)," Maximum number of updates): ",BayesMultiInfo["nup"])
+    if auto ==  True:
+        print("Iteration: ", nup,", F-count: ",np.size(KrigNewMultiInfo["X"],0)," Maximum number of updates): ",BayesMultiInfo["nup"])
+    else:
+        pass
 
+    KrigScalarizedInfo = copymultiKrigInfo(KrigInfoBayesMulti, 0)
     if BayesMultiInfo["krignum"] == 1:
-        KrigScalarizedInfo = copymultiKrigInfo(KrigInfoBayesMulti,0)
         KrigScalarizedInfo["y"] = paregopre(yall)
-        KrigScalarizedInfo = kriging(KrigScalarizedInfo, standardization=True)
+        KrigScalarizedInfo = kriging(KrigScalarizedInfo, standardization=True, normalize_y=norm_y)
 
     while nup <= BayesMultiInfo["nup"]:
 
@@ -205,18 +254,43 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
             if BayesMultiInfo["refpointtype"].lower() == "dynamic":
                 BayesMultiInfo["refpoint"] = np.max(yall,0)+(np.max(yall,0)-np.min(yall,0))*2
 
+        # perform update
         # Perform one iteration of multi-objective Bayesian optimization
         if BayesMultiInfo["krignum"] == 1:
-            xnext,_ = run_acquifun_opt(BayesMultiInfo,KrigScalarizedInfo)
+            xnext,ehvinext = run_acquifun_opt(BayesMultiInfo,KrigScalarizedInfo)
         else:
-            xnext,_ = run_multi_acquifun_opt(BayesMultiInfo,KrigNewMultiInfo,ypar)
+            xnext,ehvinext = run_multi_acquifun_opt(BayesMultiInfo,KrigNewMultiInfo,ypar,ConstraintInfo)
+
+        if multiupdate == 0 or multiupdate == 1:
+            pass
+        else:
+            # perform multi update
+            yalltemp = deepcopy(yall)
+            Xalltemp = deepcopy(Xall)
+            yprednext = np.zeros(shape=[len(KrigNewMultiInfo["y"])])
+            KrigNewMultiInfotemp = deepcopy(KrigNewMultiInfo)
+            Xalltemp, yalltemp = simultpred(multiupdate, KrigNewMultiInfotemp, BayesMultiInfo, KrigScalarizedInfo,
+                                            yprednext, xnext, yalltemp, Xalltemp,ConstraintInfo)
+            xnext = Xalltemp[-multiupdate:]
+            ynextpredicted = yalltemp[-multiupdate:]
+
+        # Break Loop if auto is False
+        if auto is False:
+            break
+        else:
+            pass
 
         # Evaluate new sample
-        ynext = eval('evaluate(xnext,KrigInfoBayesMulti["problem"])')
+        if np.ndim(xnext) == 1:
+            ynext = eval('evaluate(xnext,KrigInfoBayesMulti["problem"])')
+        else:
+            ynext = np.zeros(shape=[np.size(xnext,0),len(KrigNewMultiInfo["y"])])
+            for ii in range(0,np.size(xnext,0)):
+                ynext[ii,:] = eval('evaluate(xnext[ii,:],KrigInfoBayesMulti["problem"])')
 
         # Give treatment to failed solutions, Reference : "Forrester, A. I., SÃ³bester, A., & Keane, A. J. (2006). Optimization with missing data.
         # Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences, 462(2067), 935-945."
-        if math.isnan(ynext.any()) == True:
+        if math.isnan(ynext.any()) is True:
             for jj in range(0,len(KrigInfoBayesMulti["y"])):
                 if BayesMultiInfo.krignum == 1:
                     KrigNewMultiInfo = kriging(KrigNewMultiInfo,standardization=True,num=jj)
@@ -226,10 +300,15 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
         # Enrich experimental design
         KrigNewMultiInfo["X"] = np.vstack((KrigNewMultiInfo["X"],xnext))
         for jj in range(0, len(KrigInfoBayesMulti["y"])):
-            KrigNewMultiInfo["y"][jj] = np.vstack((KrigNewMultiInfo["y"][jj],ynext[jj]))
+            if np.ndim(ynext) == 1:
+                ynext = np.array([ynext])
+            KrigNewMultiInfo["y"][jj] = np.vstack((KrigNewMultiInfo["y"][jj],ynext[:,jj].reshape(-1,1)))
             # Re-create Kriging models if multiple Kriging methods are used.
-            if BayesMultiInfo["krignum"] > 1:
-                KrigNewMultiInfo = kriging(KrigNewMultiInfo,standardization=True,num=jj)
+        if BayesMultiInfo["krignum"] > 1:
+            for jj in range(0, len(KrigInfoBayesMulti["y"])):
+                KrigNewMultiInfo = kriging(KrigNewMultiInfo,standardization=True,normalize_y=norm_y,num=jj)
+        else:
+            pass
 
         yall = np.vstack((yall,ynext))
         Xall = np.vstack((Xall,xnext))
@@ -260,6 +339,53 @@ def mobounc(BayesMultiInfo,KrigInfoBayesMulti):
 
     ybest,I = searchpareto.paretopoint(yall)
     I = I.astype(int)
-    Xbest = Xall[I,:]
 
-    return (Xbest,ybest,KrigNewMultiInfo)
+    if auto == True:
+        Xbest = Xall[I, :]
+        Xout = Xbest
+        yout = ybest
+    else:
+        Xout = xnext
+        yout = ynextpredicted
+
+    return (Xout, yout, KrigNewMultiInfo)
+
+def simultpred(multiupdate,KrigNewMultiInfotemp,BayesMultiInfo,KrigScalarizedInfo,yprednext,xnext,yalltemp,Xalltemp,ConstraintInfo):
+    for ii in range(0, multiupdate):
+        BayesMultiInfo["constsatisfied"] = False
+        KrigNewMultiInfotemp["X"] = np.vstack((KrigNewMultiInfotemp["X"], xnext))
+        bound = np.vstack((- np.ones(shape=[1, KrigNewMultiInfotemp["nvar"]]),
+                           np.ones(shape=[1, KrigNewMultiInfotemp["nvar"]])))
+
+        for jj in range(0, len(KrigNewMultiInfotemp["y"])):
+            yprednext[jj] = prediction(xnext, KrigNewMultiInfotemp, ["pred"], num=jj)
+            KrigNewMultiInfotemp["y"][jj] = np.vstack((KrigNewMultiInfotemp["y"][jj], yprednext[jj]))
+
+        Y = KrigNewMultiInfotemp["y"]
+        Y = np.hstack((Y[0], Y[1]))
+        KrigNewMultiInfotemp["X_norm"], y_normtemp = standardize(KrigNewMultiInfotemp["X"], Y, type="default", normy= True,
+                                                     range=np.vstack((np.hstack((KrigNewMultiInfotemp["lb"],np.min(Y,0))),
+                                                                      np.hstack((KrigNewMultiInfotemp["ub"],np.max(Y,0))))))
+
+        KrigNewMultiInfotemp["y_norm"][0] = y_normtemp[:,0].reshape(-1,1)
+        KrigNewMultiInfotemp["y_norm"][1] = y_normtemp[:,1].reshape(-1,1)
+        for jj in range(0, len(KrigNewMultiInfotemp["y"])):
+            KrigNewMultiInfotemp["F"][jj] = compute_regression_mat(KrigNewMultiInfotemp["idx"][jj],
+                                                                   KrigNewMultiInfotemp["X_norm"], bound,
+                                                                   np.ones(
+                                                                       shape=[KrigNewMultiInfotemp["nvar"]]))
+        for jj in range(0, len(KrigNewMultiInfotemp["y"])):
+            KrigNewMultiInfotemp["num"] = jj
+            xinput = np.hstack((KrigNewMultiInfotemp["Theta"][jj],np.log10(KrigNewMultiInfotemp["SigmaSqr"][jj]) ))
+            KrigNewMultiInfotemp = likelihood(xinput, KrigNewMultiInfotemp, retresult="all")
+
+        yalltemp = np.vstack((yalltemp, yprednext))
+        Xalltemp = np.vstack((Xalltemp, xnext))
+        ypartemp, _ = searchpareto.paretopoint(yalltemp)
+
+        if BayesMultiInfo["krignum"] == 1:
+            xnext, ehvinext = run_acquifun_opt(BayesMultiInfo, KrigScalarizedInfo)
+        else:
+            xnext, ehvinext = run_multi_acquifun_opt(BayesMultiInfo, KrigNewMultiInfotemp, ypartemp, ConstraintInfo)
+
+    return (Xalltemp,yalltemp)

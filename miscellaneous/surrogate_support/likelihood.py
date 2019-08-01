@@ -37,6 +37,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
     """
     mode = kwargs.get('retresult', "default")
     nvar = KrigInfo["nvar"]
+    nsamp = KrigInfo["nsamp"]
     F = KrigInfo["F"]
     kernel = KrigInfo["kernel"]
     nkernel = KrigInfo["nkernel"]
@@ -50,7 +51,7 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
             y = KrigInfo["y"]
         else:
             X = KrigInfo["X_norm"]
-            if "y_norm" in KrigInfo:
+            if "y_norm" in KrigInfo and KrigInfo["y_norm"][0] != 0:
                 y = KrigInfo["y_norm"]
             else:
                 y = KrigInfo["y"]
@@ -63,41 +64,42 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         else:
             X = KrigInfo["X_norm"]
             F = KrigInfo["F"][num]
-            if "y_norm" in KrigInfo:
+            if KrigInfo["norm_y"] == True:
                 y = KrigInfo["y_norm"][num]
             else:
-                y = KrigInfo["y"][num]
+                y = np.array(KrigInfo["y"][num])
         if KrigInfo["type"].lower() == "kpls":
             plscoeff = KrigInfo["plscoeff"][num]
 
     if type(x) is float or type(x) is int or type(x) is np.float64 or type(x) is np.int64:
         x = np.array([x])
-    if "n_princomp" in KrigInfo:
+    if KrigInfo["n_princomp"] is not False:
         nvar = KrigInfo["n_princomp"]
 
-    if len(x) == nvar: # Nugget is not tunable, single kernel
+    if len(x) == nvar+1: # Nugget is not tunable, single kernel
         nugget = KrigInfo["nugget"]
         eps = 10. ** nugget
         wgkf = np.array([1])
-    elif len(x) == nvar+1: # Nugget is tunable, single kernel
+    elif len(x) == nvar+2: # Nugget is tunable, single kernel
         # nugget = rescale(x[nvar],KrigInfo["lbhyp"][0],KrigInfo["ubhyp"][0],KrigInfo["lbhyp"][nvar],KrigInfo["ubhyp"][nvar])[0]
-        nugget = x[nvar]
+        nugget = x[nvar+1]
         eps = 10. ** nugget
         wgkf = np.array([1])
-    elif len(x) == nvar+nkernel: # Nugget is not tunable, multiple kernels
+    elif len(x) == nvar+nkernel+1: # Nugget is not tunable, multiple kernels
         nugget = KrigInfo["nugget"]
-        eps = 10. ** nugget
-        # weight = rescale(x[nvar:nvar+nkernel],KrigInfo["lbhyp"][0],KrigInfo["ubhyp"][0],0,1)
-        weight = x[nvar:nvar+nkernel]
-        wgkf = weight/np.sum(weight)
-    elif len(x) == nvar+nkernel+1:
-        nugget = x[nvar]
         eps = 10. ** nugget
         weight = x[nvar+1:nvar+nkernel+1]
-        wgkf = weight / np.sum(weight)
+        wgkf = weight/ np.sum(weight)
+    elif len(x) == nvar+nkernel+2: # Nugget is tunable, multiple kernels
+        nugget = x[nvar+1]
+        eps = 10. ** nugget
+        weight = x[nvar+2:nvar+nkernel+2]
+        wgkf = weight/ np.sum(weight)
 
 
     theta = 10**(x[0:nvar])
+    SigmaSqr = 10 ** (x[nvar])
+
     if num == None:
         KrigInfo["Theta"] = x[0:nvar]
         KrigInfo["nugget"] = nugget
@@ -160,10 +162,15 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         # Use back-substitution of Cholesky instead of inverse
         temp31 = mldivide(np.transpose(U),(y - np.dot(F,BE) )) #just a temporary variable for debugging
         temp3  = mldivide(U,temp31) #just a temporary variable for debugging
-        SigmaSqr = (np.dot(np.transpose(y - np.dot(F,BE)),(temp3)))/n
+        # SigmaSqr = (np.dot(np.transpose(y - np.dot(F,BE)),(temp3)))/n
 
-        tempNegLnLike    = -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
-        NegLnLike = tempNegLnLike[0,0]
+        # Ln likelihood
+        tempNegLnLike = -0.5*LnDetPsi - nsamp/2 * np.log(2*np.pi) - nsamp/2 * np.log(SigmaSqr) - np.dot(np.transpose(y-np.dot(F,BE)),temp3)/(2*SigmaSqr)
+        NegLnLike = -tempNegLnLike[0, 0]
+
+        #Concentrated Ln-likelihood
+        # tempNegLnLike    = -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
+        # NegLnLike = tempNegLnLike
     except:
         NegLnLike = 10000
         print("Matrix is ill-conditioned, penalty is used for NegLnLike value")
@@ -174,12 +181,13 @@ def likelihood (x,KrigInfo,num=None,**kwargs):
         KrigInfo["U"] = U
         KrigInfo["Psi"] = Psi
         KrigInfo["BE"] = BE
-        KrigInfo["SigmaSqr"] = SigmaSqr[0,0]
+        KrigInfo["SigmaSqr"] = SigmaSqr
+        KrigInfo["NegLnLike"] = NegLnLike
     else:
         KrigInfo["U"][num] = np.array(U)
         KrigInfo["Psi"][num] = np.array(Psi)
         KrigInfo["BE"][num] = np.array(BE)
-        KrigInfo["SigmaSqr"][num] = SigmaSqr[0,0]
+        KrigInfo["SigmaSqr"][num] = SigmaSqr
 
     if mode.lower() == "default":
         return NegLnLike

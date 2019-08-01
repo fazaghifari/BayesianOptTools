@@ -5,6 +5,7 @@ from miscellaneous.surrogate_support.prediction import prediction
 from miscellaneous.sampling.samplingplan import sampling,realval,standardize
 from testcase.analyticalfcn.cases import evaluate
 from miscellaneous.surrogate_support.initinfo import initkriginfo
+from miscellaneous.surrogate_support import likelihood
 from optim_tools.GAv1 import uncGA
 from matplotlib import cm
 import matplotlib.pyplot as plt
@@ -15,12 +16,12 @@ import time
 KrigInfo = dict()
 kernel = ["gaussian"]
 # Sampling
-nsample = 15
+nsample = 25
 nvar = 2
 ub = np.array([10,15])
 lb = np.array([-5,0])
 nup = 3
-sampoption = "rlh"
+sampoption = "halton"
 samplenorm,sample = sampling(sampoption,nvar,nsample,result="real",upbound=ub,lobound=lb)
 X = sample
 #Evaluate sample
@@ -40,13 +41,15 @@ KrigInfo["lb"]= lb
 KrigInfo["kernel"] = kernel
 KrigInfo["TrendOrder"] = 0
 KrigInfo["nugget"] = -6
-KrigInfo["n_princomp"] = 2
+KrigInfo["n_princomp"] = 1
+KrigInfo["optimizer"] = "slsqp"
 
 #Run Kriging
 t = time.time()
-myKrig = kriging(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
+myKrig = kpls(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
 elapsed = time.time() - t
 print("elapsed time for train Kriging model: ", elapsed,"s")
+# print("LOOCV Error Kriging : ", KrigInfo["LOOCVerror"], " % (MAPE)")
 
 #Test Kriging Output
 neval = 10000
@@ -85,3 +88,4 @@ fig = plt.figure()
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(x1eval, x2eval, yeval1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
 plt.show()
+

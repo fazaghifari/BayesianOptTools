@@ -18,6 +18,10 @@ def evaluate(X,type):
         y = griewank(X)
     elif type.lower() == "schaffer":
         y = schaffer(X)
+    elif type.lower() == "schaffer1":
+        y = schaffer1(X)
+    elif type.lower() == "fonseca":
+        y = fonseca(X)
     else:
         raise NameError("Test case unavailable!")
     return y
@@ -110,3 +114,34 @@ def schaffer (x):
     if m == 1:
         fitness = fitness[0,:]
     return fitness
+
+def fonseca (x):
+    b = np.size(x[:,0])
+    n = 2
+    m = np.size(x, 0)
+    one = np.ones(shape=[b,1])
+    sum1 = np.zeros(shape=[b,1]);f1 = np.zeros(shape=[b,1])
+    sum2 = np.zeros(shape=[b,1]);f2 = np.zeros(shape=[b,1])
+    c  = np.ones(shape=[n])*(1/np.sqrt(n))
+    for jj in range (0,b):
+        sum1[jj,0] = -1*np.sum((x[jj,:]-(c))**2)
+        sum2[jj,0] = -1*np.sum((x[jj,:]+(c))**2)
+        f1[jj,0] = one[jj,0] - np.exp(sum1[jj,0])
+        f2[jj,0] = one[jj,0] - np.exp(sum2[jj,0])
+    f = np.hstack((f1,f2))
+    if m == 1:
+        f = f[0,:]
+    return f
+
+def schaffer1 (x):
+    b = np.size(x[:,0])
+    m = np.size(x, 0)
+    f1 = np.zeros(shape=[b, 1])
+    f2 = np.zeros(shape=[b, 1])
+    for jj in range (0,b):
+        f1[jj,0] = x[jj,0]**2
+        f2[jj,0] = (x[jj,0]-2)**2
+    f = np.hstack((f1, f2))
+    if m == 1:
+        f = f[0, :]
+    return f
