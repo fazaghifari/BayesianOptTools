@@ -39,6 +39,7 @@ KrigMultiInfo["nugget"] = -6
 KrigMultiInfo["nkernel"] = len(KrigMultiInfo["kernel"])
 KrigMultiInfo["LOOCVerror"] = [0] * nobj
 KrigMultiInfo["LOOCVpred"] = [0] * nobj
+KrigMultiInfo["optimizer"] = "cobyla"
 
 #Set Bayesian Optimization info
 BayesMultiInfo["nup"] = 1
@@ -51,17 +52,19 @@ ConstInfo["consttype"] = "tabulated"
 #Create Kriging
 myKrig = [0]*2
 for kk in range(0,2):
-    myKrig[kk] = kriging(KrigMultiInfo,standardization=True,normtype="default",disp=True,num=kk,loocvcalc=True, normalize_y=True)
+    myKrig[kk] = kriging(KrigMultiInfo,standardization=True,normtype="default",disp=True,num=kk,loocvcalc=True,
+                         normalize_y=True)
     print("LOOCV Error Kriging ",kk,": ",KrigMultiInfo["LOOCVerror"][kk]," % (MAPE)")
 
 #Run Bayesian Optimization
-xnext, ynext, KrigNewMultiInfo = mobounc(BayesMultiInfo,KrigMultiInfo, auto=False, multiupdate=3, normalize_y=True, ConstraintInfo=ConstInfo)
+xnext, ynext, KrigNewMultiInfo = mobounc(BayesMultiInfo,KrigMultiInfo, auto=False, multiupdate=5, normalize_y=True,
+                                         ConstraintInfo=ConstInfo)
 print("Suggested next sample: ",xnext,", F-count: ",np.size(KrigMultiInfo["X"],0))
 np.savetxt("nextsamp.csv", xnext, delimiter=",")
 np.savetxt("predictedynext.csv", ynext, delimiter=",")
 
 plt.scatter(y[:,0],y[:,1])
 plt.scatter(ynext[:,0],ynext[:,1])
-plt.ylabel('dB (C)')
-plt.xlabel('CD')
+plt.ylabel('OP')
+plt.xlabel('-CL')
 plt.show()

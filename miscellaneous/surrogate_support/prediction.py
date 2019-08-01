@@ -179,16 +179,14 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
             psi_i = calckernel(X, x, theta, nvar, type=kernel[ii])
             PsiComp[:, :, ii] = wgkf[ii] * psi_i
         psi = np.sum(PsiComp, 2)
-        # for i in range (0,n):
-        #     psi[i]= np.exp(-1*np.sum(theta*abs(X[i,:]-x)**p))
+
     elif KrigInfo['type'].lower() == 'kpls':
         for ii in range(0, nkernel):
             psi_i = calckernel(X, x, theta, KrigInfo["nvar"], type=kernel[ii],
                                plscoeff=plscoeff)
             PsiComp[:, :, ii] = wgkf[ii] * psi_i
         psi = np.sum(PsiComp, 2)
-        # for i in range(0, n):
-        #     psi[i] = np.exp(-1 * np.sum(theta * np.dot(((X[i, :] - x) ** p), (plscoeff ** p))))
+
     else:
         msg = (f"Kriging model dictionary 'type' value: '{KrigInfo['type']}'"
                f"is not recognised.")
@@ -213,8 +211,6 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
     term1 = (1 - np.sum(np.transpose(psi) * np.transpose(dummy1), 1))
     ux = (np.dot(np.transpose(PHI), dummy1)) - np.transpose(PC)
     term2 = ux * (mldivide(np.dot(np.transpose(PHI), dummy2), ux))
-    # tempterm1 = np.transpose(np.array([term1]))  # Apparently unused?
-    # newterm1 = np.matlib.repmat(tempterm1, 1, np.size(term2, 0))  # Apparently unused?
     SSqr = np.dot(SigmaSqr, (term1 + term2))
     s = abs(SSqr) ** 0.5
 
@@ -248,9 +244,9 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
                 EITermTwo = (np.transpose(s) / np.sqrt(2 * np.pi)
                              * np.exp(- 0.5 * (yBest - f) ** 2
                                       / np.transpose(SSqr)))
+
                 # Give penalty for CMA-ES optimizer, if both term produce 0.
                 # Else in certain conditions, it may leads to error in CMA-ES.
-
                 realmin = np.finfo(float).tiny
                 if not EITermOne.any() and not EITermTwo.any():
                     tiny_number = np.random.uniform(realmin, realmin * 100)

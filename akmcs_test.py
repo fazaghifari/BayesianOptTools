@@ -5,15 +5,13 @@ from testcase.RA.testcase import evaluate
 from miscellaneous.surrogate_support.initinfo import initkriginfo
 import time
 
-nvar = 40
+nvar = 10
 n_krigsamp = 50
 problem = "hidimenra"
 
 # Monte Carlo Sampling
-init_samp = AKMCS.mcpopgen(type="gaussian",sigma=0.2,ndim=nvar,n_order=5,n_coeff=3,mu=0)
-init_samp = np.exp(init_samp)
-init_krigsamp = 1.5*np.random.randn(n_krigsamp,nvar)
-init_krigsamp = np.exp(init_krigsamp)
+init_samp = AKMCS.mcpopgen(type="lognormal",stddev=0.2,ndim=nvar,n_order=5,n_coeff=3,mean=1)
+init_krigsamp = AKMCS.mcpopgen(type="lognormal",stddev=0.2,ndim=nvar,n_order=1,n_coeff=5,mean=1)
 ykrig = evaluate(init_krigsamp, type= problem)
 
 init_samp_G = evaluate(init_samp, type= problem)
@@ -41,7 +39,7 @@ KrigInfo["nugget"] = -6
 KrigInfo["nkernel"] = len(KrigInfo["kernel"])
 KrigInfo["LOOCVerror"] = 0
 KrigInfo["LOOCVpred"] = 0
-KrigInfo["n_princomp"] = 1
+KrigInfo["n_princomp"] = 2
 KrigInfo["optimizer"] = "cobyla"
 
 # Run AK-MCS
@@ -57,13 +55,13 @@ elapsed = time.time() - t
 print("elapsed time is : ", elapsed, "s")
 print(LFUval)
 
-plt.scatter(init_samp[:,0],init_samp[:,1],s=50,c='c',label='Monte Carlo Sampling')
-plt.scatter(positive_samp[:,0],positive_samp[:,1],s=50,c='y',label='G(x)>0')
-plt.scatter(init_krigsamp[:,0],init_krigsamp[:,1],s=100, c='r',label='Initial Samples')
-plt.scatter(updatedX[:,0],updatedX[:,1],marker='x',c='k',s=100,label='Update')
-plt.ylabel('x2')
-plt.xlabel('x1')
-plt.xlim(-8,8)
-plt.ylim(-8,8)
-plt.legend()
-plt.show()
+# plt.scatter(init_samp[:,0],init_samp[:,1],s=50,c='c',label='Monte Carlo Sampling')
+# plt.scatter(positive_samp[:,0],positive_samp[:,1],s=50,c='y',label='G(x)>0')
+# plt.scatter(init_krigsamp[:,0],init_krigsamp[:,1],s=100, c='r',label='Initial Samples')
+# plt.scatter(updatedX[:,0],updatedX[:,1],marker='x',c='k',s=100,label='Update')
+# plt.ylabel('x2')
+# plt.xlabel('x1')
+# plt.xlim(-8,8)
+# plt.ylim(-8,8)
+# plt.legend()
+# plt.show()
