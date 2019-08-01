@@ -42,11 +42,11 @@ KrigInfo["kernel"] = kernel
 KrigInfo["TrendOrder"] = 0
 KrigInfo["nugget"] = -6
 KrigInfo["n_princomp"] = 1
-KrigInfo["optimizer"] = "slsqp"
+KrigInfo["optimizer"] = "lbfgsb"
 
 #Run Kriging
 t = time.time()
-myKrig = kpls(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
+myKrig = kriging(KrigInfo,standardization=True,normtype="default",normalize_y=False,disp=True)
 elapsed = time.time() - t
 print("elapsed time for train Kriging model: ", elapsed,"s")
 # print("LOOCV Error Kriging : ", KrigInfo["LOOCVerror"], " % (MAPE)")
