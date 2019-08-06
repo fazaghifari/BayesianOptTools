@@ -6,7 +6,6 @@ from miscellaneous.sampling.samplingplan import sampling,realval,standardize
 from testcase.analyticalfcn.cases import evaluate
 from miscellaneous.surrogate_support.initinfo import initkriginfo
 from miscellaneous.surrogate_support import likelihood
-from optim_tools.GAv1 import uncGA
 from matplotlib import cm
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
