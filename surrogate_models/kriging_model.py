@@ -6,6 +6,7 @@ from scipy.optimize import minimize_scalar
 from scipy.optimize import minimize, fmin_cobyla
 from surrogate_models.supports.trendfunction import polytruncation, compute_regression_mat
 from surrogate_models.supports.krigloocv import loocv
+from surrogate_models.supports.likelihood_func import likelihood
 import cma
 import logging
 
@@ -69,8 +70,9 @@ class Kriging:
         else:
             self.nbhyp = KrigInfo["nvar"]
 
-        KrigInfo = kriginfocheck(KrigInfo, lb, ub, self.nbhyp, loglvl=disp)
+        KrigInfo,scaling = kriginfocheck(KrigInfo, lb, ub, self.nbhyp, loglvl=disp)
         KrigInfo["n_princomp"] = False
+        self.trainvar = trainvar
         self.type = 'kriging'
         self.KrigInfo = KrigInfo
         self.normy = normy
@@ -79,6 +81,8 @@ class Kriging:
         self.num = num
         self.Y = KrigInfo["y"]
         self.X = KrigInfo["X"]
+        self.scaling = scaling  # Scaling for CMA-ES Optimizer, otherwise, unused.
+        self.sigmacmaes = (ub-lb)/5  # Sigma for CMA-ES Optimizer, otherwise, unused.
 
     def standardize(self):
         """
@@ -147,7 +151,7 @@ class Kriging:
             self.KrigInfo["F"] = compute_regression_mat(self.KrigInfo["idx"], self.KrigInfo["X"], bound,
                                                         np.ones(shape=[self.KrigInfo["nvar"]]))
 
-    def train(self, loglvl='WARNING'):
+    def train(self, loglvl='WARNING', parallel = False):
         """
         Train Kriging model
         
@@ -167,14 +171,205 @@ class Kriging:
             _, xhyp = sampling('sobol', self.nbhyp, self.KrigInfo['nrestart'],
                                result="real", upbound=self.KrigInfo["ubhyp"], lobound=self.KrigInfo["lbhyp"])
 
+        # Optimize hyperparam if number of hyperparameter is 1 using golden section method
+        if self.nbhyp == 1:
+            res = minimize_scalar(likelihood, bounds=(self.lb, self.ub), method='golden', args=(self.KrigInfo,'default',
+                                                                                                self.trainvar) )
+            best_x = np.array([res.x])
+        else:
+            # Set Bounds and Constraints for Optimizer
+            # Set Bounds for LBSGSB or SLSQP if one is used.
+            if self.KrigInfo["optimizer"] == "lbfgsb" or self.KrigInfo["optimizer"] == "slsqp":
+                optimbound = np.transpose(np.vstack((self.KrigInfo["lbhyp"], self.KrigInfo["ubhyp"])))
+            # Set Constraints for Cobyla if used
+            elif self.KrigInfo["optimizer"] == "cobyla":
+                optimbound = []
+                for i in range(len(self.KrigInfo["ubhyp"])):
+                    optimbound.append(lambda x, Kriginfo, itemp=i: x[itemp] - self.KrigInfo["lbhyp"][itemp])
+                    optimbound.append(lambda x, Kriginfo, itemp=i: self.KrigInfo["ubhyp"][itemp] - x[itemp])
+            else:
+                optimbound = None
+
+            logging.INFO(f"Training {self.KrigInfo['nrestart']} hyperparameter(s)")
+
+            # Train hyperparams
+            bestxcand,neglnlikecand = self.parallelopt(xhyp,parallel,optimbound,loglvl)
+
+            # Search best hyperparams among the candidates
+            I = np.argmin(neglnlikecand)
+            best_x = bestxcand[I, :]
+
+            logging.INFO("Single Objective, train hyperparam, end.")
+            logging.INFO("Best hyperparameter is ", best_x)
+            logging.INFO("With NegLnLikelihood of ", neglnlikecand[I])
+
+            # Calculate Kriging model based on the best hyperparam.
+            self.KrigInfo = likelihood(best_x,self.KrigInfo,mode='all')
+
+    def loocvcalc(self, metrictype='mape'):
+        """
+        Calculate Leave-one-out Cross Validation metric of Kriging model
+        Args:
+            metrictype (str) : Type of metric that want to be used. Defaults to MAPE
+                available metrics are :
+                    - 'e' : Error
+                    - 'ae' : Absolute error
+                    - 'mae' : Mean absolute error
+                    - 'se' : Squared error
+                    - 'mse' : Mean Squared error
+                    - 'rmse' : Root Mean Squared error
+                    - 're' : Relative error
+                    - 'are' : Absolute relative error
+                    - 'mare' : Mean absolute relative error
+                    - 'sre' : Squared relative error
+                    - 'msre' : Mean squared relative error
+                    - 'rmsre' : Root mean squared relative error
+                    - 'pe' : Percentage error
+                    - 'ape' : Absolute percentage error
+                    - 'mape' : Mean absolute percentage error
+                    - 'spe' : Squared percentage error
+                    - 'mspe' : Mean squared percentage error
+                    - 'rmspe' : Root mean squared percentage error
+
+        Returns:
+            LOOCVerror : Value of chosen error metric.
+            LOOCVpred : Prediction of LOOCV.
+
+        """
+
+        self.KrigInfo["LOOCVerror"],self.KrigInfo["LOOCVpred"] = loocv(self.KrigInfo, errtype=metrictype)
+        return (self.KrigInfo["LOOCVerror"],self.KrigInfo["LOOCVpred"])
+
+    def parallelopt(self,xhyp,parallel,optimbound,loglvl='WARNING'):
+        """
+        Optimize hyperparameter using parallel processing
+
+        Args:
+            xhyp (nparray): Array of starting points.
+            parallel (bool): True or False. Perform parallel processing or not
+            loglvl (str): level of logging function.
+
+         Returns:
+             bestxcand (nparray): Array of best X candidates for each starting points.
+             neglnlikecand (nparray): Array of corresponding Negative Ln-Likelihood value of best X candidates.
+        """
         # Create array of solution candidate.
         bestxcand = np.zeros(shape=[self.KrigInfo['nrestart'], self.nbhyp])
         neglnlikecand = np.zeros(shape=[self.KrigInfo['nrestart']])
 
-        # Optimize hyperparam if number of hyperparameter is 1
-        if self.nbhyp == 1:
-            res = minimize_scalar(likelihood.likelihood, bounds=(self.lb, self.ub), method='golden')
-            best_x = np.array([res.x])
+        logging.basicConfig(level=loglvl)
+        # Try to identify number of core on machine fo multiprocessing
+        try:
+            n_cpu = mp.cpu_count()
+            skip_mp = False
+        except NotImplementedError:
+            # No idea how many cores so just run sequentially
+            skip_mp = True
+
+        if parallel:
+            pass
+        else:
+            skip_mp = True
+
+        if skip_mp:
+            # Calculate hyperparams sequentially
+            for ii in range(self.KrigInfo['nrestart']):
+
+                logging.INFO(f'Training hyperparameter {ii + 1}')
+
+                xhyp_ii = xhyp[ii, :]
+                p = (self.KrigInfo, xhyp_ii, self.KrigInfo['ubhyp'], self.KrigInfo['lbhyp'],
+                     self.sigmacmaes, self.scaling, optimbound)
+                bestxcand_ii, neglnlikecand_ii = tune_hyperparameters(*p)
+                bestxcand[ii, :] = bestxcand_ii
+                neglnlikecand[ii] = neglnlikecand_ii
+
+        else:
+            # Calculate hyperparams in parallel
+            print(f"Training in parallel on {n_cpu} available cores.")
+
+            hyperparam_inputs = []
+            for ii in range(self.KrigInfo['nrestart']):
+                xhyp_ii = xhyp[ii, :]
+                hyperparam_inputs.append((self.KrigInfo, xhyp_ii, self.KrigInfo['ubhyp'],self.KrigInfo['lbhyp'],
+                                          self.sigmacmaes, self.scaling, optimbound))
+
+            with mp.Pool(n_cpu) as pool:
+                results = pool.starmap(tune_hyperparameters,
+                                       hyperparam_inputs)
+
+            # Collate results back into numpy arrays
+            for i, (bestxcand_ii, neglnlikecand_ii) in enumerate(results):
+                bestxcand[i] = bestxcand_ii
+                neglnlikecand[i] = neglnlikecand_ii
+
+        return (bestxcand,neglnlikecand)
+
+
+def tune_hyperparameters(KrigInfo, xhyp_ii, ubhyp=None, lbhyp=None,
+                         sigmacmaes=None, scaling=None, optimbound=None):
+    """Estimate the best hyperparameters.
+
+    Extracted hyperpamaeter tuning code into a function for
+    parallelisation.
+
+    Args:
+        KrigInfo (dict): Dictionary that contains Kriging information.
+        xhyp_ii (nparray): starting point number ii.
+        ubhyp (nparray): upper bounds of hyperparams.
+        lbhyp (nparray): lower bounds of hyperparams.
+        sigmacmaes (float): initial sigma for cma-es.
+        scaling (list): scaling for cma-es.
+        optimbound: bounds for optimizer.
+
+    Returns:
+        bestxcand (np.array(float)): Best x candidate array
+        neglnlikecand (float): Negative ln-likelihood candidate
+
+    Raises:
+        ValueError: If a required parameter for the chosen optimizer is
+            missing.
+    """
+    if KrigInfo["optimizer"] == "cmaes":
+        for p in (ubhyp, lbhyp, sigmacmaes, scaling):
+            if p is None:
+                raise ValueError(f'{p} must be set if optimizer is cmaes.')
+        bestxcand, es = cma.fmin2(likelihood, xhyp_ii, sigmacmaes,
+                                  {'bounds': [lbhyp.tolist(), ubhyp.tolist()],
+                                   'scaling_of_variables': scaling,
+                                   'verb_disp': 0, 'verbose': -9},
+                                  args=(KrigInfo,))
+        neglnlikecand = es.result[1]
+
+    elif KrigInfo["optimizer"] == "lbfgsb":
+        if optimbound is None:
+            raise ValueError('optimbound must be set if optimizer is lbfgsb.')
+        res = minimize(likelihood, xhyp_ii, method='L-BFGS-B',
+                       bounds=optimbound, args=(KrigInfo))
+        bestxcand = res.x
+        neglnlikecand = res.fun
+
+    elif KrigInfo["optimizer"] == "slsqp":
+        if optimbound is None:
+            raise ValueError('optimbound must be set if optimizer is slsqp.')
+        res = minimize(likelihood, xhyp_ii, method='SLSQP',
+                       bounds=optimbound, args=(KrigInfo))
+        bestxcand = res.x
+        neglnlikecand = res.fun
+
+    elif KrigInfo["optimizer"] == "cobyla":
+        if optimbound is None:
+            raise ValueError('optimbound must be set if optimizer is cobyla.')
+        res = fmin_cobyla(likelihood, xhyp_ii, optimbound,
+                          rhobeg=0.5, rhoend=1e-4, args=(KrigInfo,))
+        bestxcand = res
+        neglnlikecand = likelihood(res, KrigInfo)
+
+    else:
+        msg = (f"{KrigInfo['optimizer']} in KrigInfo['Optimizer'] is not "
+               f"recognised.")
+        raise KeyError(msg)
+    return bestxcand, neglnlikecand
 
 
 def kriginfocheck(KrigInfo, lb, ub, nbhyp, loglvl='WARNING'):
@@ -275,4 +470,4 @@ def kriginfocheck(KrigInfo, lb, ub, nbhyp, loglvl='WARNING'):
     KrigInfo["lbhyp"] = lbhyp
     KrigInfo["ubhyp"] = ubhyp
 
-    return KrigInfo
+    return KrigInfo,scaling

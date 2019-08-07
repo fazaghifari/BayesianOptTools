@@ -1,5 +1,5 @@
 import numpy as np
-from miscellaneous.surrogate_support.errperf import errperf
+from surrogate_models.supports.errperf import errperf
 
 def loocv(KrigInfo,errtype="rmse",num=None):
 
