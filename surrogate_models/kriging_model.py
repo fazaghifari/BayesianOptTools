@@ -7,6 +7,7 @@ from scipy.optimize import minimize, fmin_cobyla
 from surrogate_models.supports.trendfunction import polytruncation, compute_regression_mat
 from surrogate_models.supports.krigloocv import loocv
 from surrogate_models.supports.likelihood_func import likelihood
+from surrogate_models.supports.prediction import prediction
 import cma
 import logging
 
@@ -239,6 +240,34 @@ class Kriging:
 
         self.KrigInfo["LOOCVerror"],self.KrigInfo["LOOCVpred"] = loocv(self.KrigInfo, errtype=metrictype)
         return (self.KrigInfo["LOOCVerror"],self.KrigInfo["LOOCVpred"])
+
+    def predict(self,x,predtypes=['pred']):
+        """
+        Prediction of Kriging model
+        Args:
+            x (nparray) : Prediction site (will be normalized to [-1,1])
+            predtypes (list) :  Requested outputs at prediction site x.
+                Valid predtypes are:
+                    'pred' - for Kriging prediction.
+                    'SSqr' - for Kriging prediction error.
+                    'fpc' - Kriging trend function.
+                    'lcb' -
+                    'ebe' -
+                    'EI' - for expected improvement.
+                    'poi' -
+                    'pof' -
+
+        Returns:
+            If only one output specified through predtypes, a single value
+            or array is returned. Else a list of each output is returned.
+
+        Raises:
+            ValueError:
+            KeyError:
+
+        """
+        result = prediction(x,self.KrigInfo,predtypes=predtypes)
+        return result
 
     def parallelopt(self,xhyp,parallel,optimbound,loglvl='WARNING'):
         """
