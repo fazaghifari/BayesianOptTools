@@ -167,8 +167,8 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
     npred = np.size(x, axis=0)
 
     # Construct regression matrix for prediction
-    bound = np.vstack((- np.ones(shape=[1, KrigInfo["nvar"]]), np.ones(shape=[1, KrigInfo["nvar"]])))
-    PC = compute_regression_mat(idx, x, bound, np.ones(shape=[KrigInfo["nvar"]]))
+    bound = np.vstack((- np.ones(shape=[1, KrigInfo['nvar']]), np.ones(shape=[1, KrigInfo['nvar']])))
+    PC = compute_regression_mat(idx, x, bound, np.ones(shape=[KrigInfo['nvar']]))
     fpc = np.dot(PC, BE)
 
     PsiComp = np.zeros(shape=[n, npred, nkernel])
@@ -182,7 +182,7 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
 
     elif KrigInfo['type'].lower() == 'kpls':
         for ii in range(0, nkernel):
-            psi_i = calckernel(X, x, theta, KrigInfo["nvar"], type=kernel[ii],
+            psi_i = calckernel(X, x, theta, KrigInfo['nvar'], type=kernel[ii],
                                plscoeff=plscoeff)
             PsiComp[:, :, ii] = wgkf[ii] * psi_i
         psi = np.sum(PsiComp, 2)
@@ -260,8 +260,10 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
             output = -ProbImp
         elif pred.lower() == 'pof':
             ProbFeas = 0.5 + 0.5 * erf(1 / np.sqrt(2)
-                                       * ((KrigInfo['limit'] - (-f))
+                                       * ((f - KrigInfo['limit'])
                                           / np.transpose(s)))
+            # if ProbFeas != 1. :
+            #     print("ProbFeas = ", ProbFeas, " f = ", f)
             output = ProbFeas
         else:
             msg = f"Specified prediction type: '{pred}' is not recognised."
