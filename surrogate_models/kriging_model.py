@@ -75,6 +75,7 @@ class Kriging:
         KrigInfo["n_princomp"] = False
         self.trainvar = trainvar
         self.type = 'kriging'
+        KrigInfo['type'] = self.type
         self.KrigInfo = KrigInfo
         self.normy = normy
         self.standardization = standardization
@@ -84,6 +85,11 @@ class Kriging:
         self.X = KrigInfo["X"]
         self.scaling = scaling  # Scaling for CMA-ES Optimizer, otherwise, unused.
         self.sigmacmaes = (ub-lb)/5  # Sigma for CMA-ES Optimizer, otherwise, unused.
+
+        if self.standardization is True:
+            self.standardize()
+        else:
+            pass
 
     def standardize(self):
         """
@@ -163,7 +169,7 @@ class Kriging:
             None
         """""
         logging.basicConfig(level=loglvl)
-        logging.INFO("Begin train hyperparam.")
+        print("Begin train hyperparam.")
 
         # Create multiple starting points
         if self.KrigInfo['nrestart'] < 1:
@@ -191,7 +197,7 @@ class Kriging:
             else:
                 optimbound = None
 
-            logging.INFO(f"Training {self.KrigInfo['nrestart']} hyperparameter(s)")
+            print(f"Training {self.KrigInfo['nrestart']:.2f} hyperparameter(s)")
 
             # Train hyperparams
             bestxcand,neglnlikecand = self.parallelopt(xhyp,parallel,optimbound,loglvl)
@@ -200,12 +206,12 @@ class Kriging:
             I = np.argmin(neglnlikecand)
             best_x = bestxcand[I, :]
 
-            logging.INFO("Single Objective, train hyperparam, end.")
-            logging.INFO("Best hyperparameter is ", best_x)
-            logging.INFO("With NegLnLikelihood of ", neglnlikecand[I])
+            print("Single Objective, train hyperparam, end.")
+            print(f"Best hyperparameter is {best_x}")
+            print(f"With NegLnLikelihood of {neglnlikecand[I]}")
 
             # Calculate Kriging model based on the best hyperparam.
-            self.KrigInfo = likelihood(best_x,self.KrigInfo,mode='all')
+            self.KrigInfo = likelihood(best_x,self.KrigInfo,mode='all',trainvar=self.trainvar)
 
     def loocvcalc(self, metrictype='mape'):
         """
@@ -304,10 +310,10 @@ class Kriging:
             # Calculate hyperparams sequentially
             for ii in range(self.KrigInfo['nrestart']):
 
-                logging.INFO(f'Training hyperparameter {ii + 1}')
+                print(f'Training hyperparameter {ii + 1}')
 
                 xhyp_ii = xhyp[ii, :]
-                p = (self.KrigInfo, xhyp_ii, self.KrigInfo['ubhyp'], self.KrigInfo['lbhyp'],
+                p = (self.KrigInfo, xhyp_ii, self.trainvar,self.KrigInfo['ubhyp'], self.KrigInfo['lbhyp'],
                      self.sigmacmaes, self.scaling, optimbound)
                 bestxcand_ii, neglnlikecand_ii = tune_hyperparameters(*p)
                 bestxcand[ii, :] = bestxcand_ii
@@ -320,8 +326,8 @@ class Kriging:
             hyperparam_inputs = []
             for ii in range(self.KrigInfo['nrestart']):
                 xhyp_ii = xhyp[ii, :]
-                hyperparam_inputs.append((self.KrigInfo, xhyp_ii, self.KrigInfo['ubhyp'],self.KrigInfo['lbhyp'],
-                                          self.sigmacmaes, self.scaling, optimbound))
+                hyperparam_inputs.append((self.KrigInfo, xhyp_ii, self.trainvar, self.KrigInfo['ubhyp'],
+                                          self.KrigInfo['lbhyp'], self.sigmacmaes, self.scaling, optimbound))
 
             with mp.Pool(n_cpu) as pool:
                 results = pool.starmap(tune_hyperparameters,
@@ -335,7 +341,7 @@ class Kriging:
         return (bestxcand,neglnlikecand)
 
 
-def tune_hyperparameters(KrigInfo, xhyp_ii, ubhyp=None, lbhyp=None,
+def tune_hyperparameters(KrigInfo, xhyp_ii, trainvar, ubhyp=None, lbhyp=None,
                          sigmacmaes=None, scaling=None, optimbound=None):
     """Estimate the best hyperparameters.
 
@@ -367,14 +373,14 @@ def tune_hyperparameters(KrigInfo, xhyp_ii, ubhyp=None, lbhyp=None,
                                   {'bounds': [lbhyp.tolist(), ubhyp.tolist()],
                                    'scaling_of_variables': scaling,
                                    'verb_disp': 0, 'verbose': -9},
-                                  args=(KrigInfo,))
+                                  args=(KrigInfo,'default',trainvar))
         neglnlikecand = es.result[1]
 
     elif KrigInfo["optimizer"] == "lbfgsb":
         if optimbound is None:
             raise ValueError('optimbound must be set if optimizer is lbfgsb.')
         res = minimize(likelihood, xhyp_ii, method='L-BFGS-B',
-                       bounds=optimbound, args=(KrigInfo))
+                       bounds=optimbound, args=(KrigInfo,'default',trainvar))
         bestxcand = res.x
         neglnlikecand = res.fun
 
@@ -382,7 +388,7 @@ def tune_hyperparameters(KrigInfo, xhyp_ii, ubhyp=None, lbhyp=None,
         if optimbound is None:
             raise ValueError('optimbound must be set if optimizer is slsqp.')
         res = minimize(likelihood, xhyp_ii, method='SLSQP',
-                       bounds=optimbound, args=(KrigInfo))
+                       bounds=optimbound, args=(KrigInfo,'default',trainvar))
         bestxcand = res.x
         neglnlikecand = res.fun
 
@@ -390,7 +396,7 @@ def tune_hyperparameters(KrigInfo, xhyp_ii, ubhyp=None, lbhyp=None,
         if optimbound is None:
             raise ValueError('optimbound must be set if optimizer is cobyla.')
         res = fmin_cobyla(likelihood, xhyp_ii, optimbound,
-                          rhobeg=0.5, rhoend=1e-4, args=(KrigInfo,))
+                          rhobeg=0.5, rhoend=1e-4, args=(KrigInfo,'default',trainvar))
         bestxcand = res
         neglnlikecand = likelihood(res, KrigInfo)
 
@@ -434,7 +440,7 @@ def kriginfocheck(KrigInfo, lb, ub, nbhyp, loglvl='WARNING'):
         availoptmzr = ["lbfgsb", "cmaes", "cobyla", "slsqp"]  # check if the specified optimizer is available
         if KrigInfo['optimizer'].lower() not in availoptmzr:
             raise ValueError(KrigInfo["optimizer"], " is not a valid optimizer.")
-        logging.INFO("The acquisition function is specified to ", KrigInfo["optimizer"], " by user")
+        print(f"The acquisition function is specified to  {KrigInfo['optimizer']}, by user")
 
     # Check if Trend order is specified. If not set to zero
     if 'TrendOrder' not in KrigInfo:

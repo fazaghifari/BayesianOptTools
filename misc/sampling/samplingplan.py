@@ -6,9 +6,9 @@ Subroutines:
 """
 import numpy as np
 import numpy.matlib
-from miscellaneous.sampling.haltonsampling import halton
-from miscellaneous.sampling.rlh import rlh
-from miscellaneous.sampling.sobol_seq import i4_sobol_generate
+from misc.sampling.haltonsampling import halton
+from misc.sampling.rlh import rlh
+from misc.sampling.sobol_seq import i4_sobol_generate
 
 def sampling(option,nvar,nsamp,**kwargs):
     ret = kwargs.get('result', "normalized")

@@ -63,13 +63,14 @@ def likelihood (x, KrigInfo, mode='default', trainvar=True):
         nvar = KrigInfo["n_princomp"]
 
     # Set nugget and weighting function
-    nugget,eps,wgkf = nuggetset(x,KrigInfo,nvar,nkernel)
+    nugget,eps,wgkf = nuggetset(x,KrigInfo,nvar,nkernel,trainvar=trainvar)
 
     # Set theta and Kriging variance
     if trainvar is True:
         theta = 10**(x[0:nvar])
         SigmaSqr = 10 ** (x[nvar])
     else:
+        theta = 10 ** (x[0:nvar])
         SigmaSqr = None
 
     # Set variables
