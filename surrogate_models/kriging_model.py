@@ -1,7 +1,6 @@
 import numpy as np
 import multiprocessing as mp
 from misc.sampling.samplingplan import sampling, standardize
-from sklearn.cross_decomposition.pls_ import PLSRegression as pls
 from scipy.optimize import minimize_scalar
 from scipy.optimize import minimize, fmin_cobyla
 from surrogate_models.supports.trendfunction import polytruncation, compute_regression_mat
@@ -50,9 +49,8 @@ class Kriging:
 
         """
 
-    def __init__(self, KrigInfo, num=None, ub=5, lb=-5, standardization=False, standtype="default", normy=True,
-                 trainvar=True,
-                 disp='WARNING'):
+    def __init__(self, KrigInfo, ub=5, lb=-5, standardization=False, standtype="default", normy=True,
+                 trainvar=True, disp='WARNING', inherit=False):
         """
         Initialize Kriging model
 
@@ -64,30 +62,33 @@ class Kriging:
             standtype (str): Type of standardization. Defaults to "default".
                 available options are "default" and "std"
             normy (bool): True or False, normalize y or not
-            trainvar (bool): True or False, train Kriging variance or not
+            trainvar (bool): True or False, train Kriging variance or not. Defaults to True.
         """
         if trainvar is True:
             self.nbhyp = KrigInfo["nvar"] + 1
         else:
             self.nbhyp = KrigInfo["nvar"]
 
-        KrigInfo,scaling = kriginfocheck(KrigInfo, lb, ub, self.nbhyp, loglvl=disp)
-        KrigInfo["n_princomp"] = False
         self.trainvar = trainvar
-        self.type = 'kriging'
-        KrigInfo['type'] = self.type
-        self.KrigInfo = KrigInfo
         self.normy = normy
         self.standardization = standardization
         self.standtype = standtype
-        self.num = num
         self.Y = KrigInfo["y"]
         self.X = KrigInfo["X"]
-        self.scaling = scaling  # Scaling for CMA-ES Optimizer, otherwise, unused.
-        self.sigmacmaes = (ub-lb)/5  # Sigma for CMA-ES Optimizer, otherwise, unused.
+        self.lb = lb
+        self.ub = ub
 
-        if self.standardization is True:
-            self.standardize()
+        if not inherit:
+            self.type = 'kriging'
+            KrigInfo['type'] = self.type
+            KrigInfo, scaling = kriginfocheck(KrigInfo, lb, ub, self.nbhyp, loglvl=disp)
+            self.KrigInfo = KrigInfo
+            self.scaling = scaling  # Scaling for CMA-ES Optimizer, otherwise, unused.
+            self.sigmacmaes = (ub-lb)/5  # Sigma for CMA-ES Optimizer, otherwise, unused.
+            if self.standardization is True:
+                self.standardize()
+            else:
+                pass
         else:
             pass
 
@@ -475,6 +476,16 @@ def kriginfocheck(KrigInfo, lb, ub, nbhyp, loglvl='WARNING'):
     else:
         nkernel = len(KrigInfo["kernel"])
     KrigInfo["nkernel"] = nkernel
+
+    # Check if n_princomp appears
+    if 'n_princomp' in KrigInfo and KrigInfo['type'] == 'kriging':
+        KrigInfo['n_princomp'] = False
+    elif 'n_princomp' not in KrigInfo and KrigInfo['type'] == 'kriging':
+        KrigInfo['n_princomp'] = False
+    elif 'n_princomp' in KrigInfo and KrigInfo['type'] == 'kpls':
+        pass
+    else:
+        print("Check kriging_model.py line 485!")
 
     # Check overall hyperparam
     lbhyp = lb * np.ones(shape=[nbhyp])

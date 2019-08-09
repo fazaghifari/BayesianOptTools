@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from surrogate_models.kriging_model import Kriging
+from surrogate_models.kpls_model import KPLS
 from misc.sampling.samplingplan import sampling,realval,standardize
 from testcase.analyticalfcn.cases import evaluate
 from surrogate_models.supports.initinfo import initkriginfo
@@ -39,13 +40,13 @@ def generate_kriging():
     KrigInfo["kernel"] = kernel
     KrigInfo["TrendOrder"] = 0
     KrigInfo["nugget"] = -6
-    KrigInfo["n_princomp"] = 1
+    KrigInfo["n_princomp"] = 2
     KrigInfo["optimizer"] = "lbfgsb"
 
     # Run Kriging
     t = time.time()
     krigobj = Kriging(KrigInfo,standardization=True,standtype='default',normy=False,trainvar=False,disp='INFO')
-    krigobj.train()
+    krigobj.train(parallel=False)
     loocverr,_ = krigobj.loocvcalc()
     elapsed = time.time() - t
     print("elapsed time for train Kriging model: ", elapsed, "s")
