@@ -39,11 +39,11 @@ def generate_krig(init_samp,n_krigsamp,nvar,problem):
     KrigInfo["LOOCVerror"] = 0
     KrigInfo["LOOCVpred"] = 0
     KrigInfo["n_princomp"] = 2
-    KrigInfo["optimizer"] = "cobyla"
+    KrigInfo["optimizer"] = "slsqp"
 
     #trainkrig
     t = time.time()
-    krigobj = KPLS(KrigInfo, standardization=True, standtype='default', normy=False, trainvar=True, disp='INFO')
+    krigobj = KPLS(KrigInfo, standardization=True, standtype='default', normy=False, trainvar=False, disp='INFO')
     krigobj.train(parallel=False)
     loocverr, _ = krigobj.loocvcalc()
     elapsed = time.time() - t

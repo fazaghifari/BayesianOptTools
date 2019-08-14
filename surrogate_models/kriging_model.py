@@ -159,7 +159,7 @@ class Kriging:
             self.KrigInfo["F"] = compute_regression_mat(self.KrigInfo["idx"], self.KrigInfo["X"], bound,
                                                         np.ones(shape=[self.KrigInfo["nvar"]]))
 
-    def train(self, loglvl='WARNING', parallel = False, disp=True):
+    def train(self, parallel = False, disp=True):
         """
         Train Kriging model
         
@@ -169,7 +169,6 @@ class Kriging:
         Returns:
             None
         """""
-        logging.basicConfig(level=loglvl)
         if disp:
             print("Begin train hyperparam.")
 
@@ -204,7 +203,7 @@ class Kriging:
                 print(f"Training {self.KrigInfo['nrestart']} hyperparameter(s)")
 
             # Train hyperparams
-            bestxcand,neglnlikecand = self.parallelopt(xhyp,parallel,optimbound,loglvl,disp)
+            bestxcand,neglnlikecand = self.parallelopt(xhyp,parallel,optimbound,disp)
 
             # Search best hyperparams among the candidates
             I = np.argmin(neglnlikecand)
@@ -280,7 +279,7 @@ class Kriging:
         result = prediction(x,self.KrigInfo,predtypes=predtypes)
         return result
 
-    def parallelopt(self,xhyp,parallel,optimbound,loglvl='WARNING',disp=True):
+    def parallelopt(self,xhyp,parallel,optimbound,disp=True):
         """
         Optimize hyperparameter using parallel processing
 
@@ -297,7 +296,6 @@ class Kriging:
         bestxcand = np.zeros(shape=[self.KrigInfo['nrestart'], self.nbhyp])
         neglnlikecand = np.zeros(shape=[self.KrigInfo['nrestart']])
 
-        logging.basicConfig(level=loglvl)
         # Try to identify number of core on machine fo multiprocessing
         try:
             n_cpu = mp.cpu_count()

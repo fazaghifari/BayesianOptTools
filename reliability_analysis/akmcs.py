@@ -58,8 +58,8 @@ class AKMCS:
         else:
             run_times = int(np.ceil(self.nsamp/10000))
             for i in range(run_times):
-                start = i * 1000
-                stop = (i+1) * 1000
+                start = i * 10000
+                stop = (i+1) * 10000
                 if i != (run_times - 1):
                     self.Gx[start:stop, :], self.sigmaG[:,start:stop] = \
                         self.krigobj.predict(self.init_samp[start:stop, :], ['pred','s'])
@@ -97,8 +97,8 @@ class AKMCS:
                 else:
                     run_times = int(np.ceil(self.nsamp / 10000))
                     for ii in range(run_times):
-                        start = ii * 1000
-                        stop = (ii + 1) * 1000
+                        start = ii * 10000
+                        stop = (ii + 1) * 10000
                         if ii != (run_times - 1):
                             self.Gx[start:stop, :], self.sigmaG[:, start:stop] = \
                                 self.krigobj.predict(self.init_samp[start:stop, :], ['pred', 's'])
