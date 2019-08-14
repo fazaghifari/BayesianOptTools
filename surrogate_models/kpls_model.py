@@ -102,7 +102,7 @@ class KPLS(Kriging):
         # Calculate PLS coeff
         _pls = pls(self.n_princomp)
         if self.standardization is True:
-            coeff_pls = _pls.fit(self.KrigInfo["X_norm"].copy(), self.Y.copy()).x_rotations_
+            coeff_pls = _pls.fit(self.KrigInfo["X_norm"].copy(), self.KrigInfo['y'].copy()).x_rotations_
         else:
-            coeff_pls = _pls.fit(self.KrigInfo["X"].copy(), self.Y.copy()).x_rotations_
+            coeff_pls = _pls.fit(self.KrigInfo["X"].copy(), self.KrigInfo['y'].copy()).x_rotations_
         self.KrigInfo["plscoeff"] = coeff_pls

@@ -40,12 +40,12 @@ def generate_kriging():
     KrigInfo["kernel"] = kernel
     KrigInfo["TrendOrder"] = 0
     KrigInfo["nugget"] = -6
-    KrigInfo["n_princomp"] = 2
-    KrigInfo["optimizer"] = "lbfgsb"
+    KrigInfo["n_princomp"] = 1
+    KrigInfo["optimizer"] = "slsqp"
 
     # Run Kriging
     t = time.time()
-    krigobj = Kriging(KrigInfo,standardization=True,standtype='default',normy=False,trainvar=False,disp='INFO')
+    krigobj = Kriging(KrigInfo,standardization=True,standtype='default',normy=False,trainvar=True,disp='INFO')
     krigobj.train(parallel=False)
     loocverr,_ = krigobj.loocvcalc()
     elapsed = time.time() - t

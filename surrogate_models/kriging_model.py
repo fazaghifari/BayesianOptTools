@@ -113,7 +113,7 @@ class Kriging:
 
                 # Normalize sample to -1 and 1
                 if self.normy is True:  # If normalize y
-                    self.KrigInfo["X_norm"], self.KrigInfo["y_norm"] = standardize(self.X, self.Y,
+                    self.KrigInfo["X_norm"], self.KrigInfo["y_norm"] = standardize(self.KrigInfo['X'], self.KrigInfo['y'],
                                                                                    type=self.standtype.lower(),
                                                                                    normy=True,
                                                                                    range=np.vstack(
@@ -124,7 +124,7 @@ class Kriging:
                     self.KrigInfo["norm_y"] = True
 
                 else:
-                    self.KrigInfo["X_norm"] = standardize(self.X, self.Y,
+                    self.KrigInfo["X_norm"] = standardize(self.KrigInfo['X'], self.KrigInfo['y'],
                                                           type=self.standtype.lower(),
                                                           range=np.vstack((self.KrigInfo["lb"], self.KrigInfo["ub"])))
                     self.KrigInfo["norm_y"] = False
@@ -137,12 +137,12 @@ class Kriging:
                     self.KrigInfo["X_norm"], self.KrigInfo["y_norm"], \
                     self.KrigInfo["X_mean"], self.KrigInfo["y_mean"], \
                     self.KrigInfo["X_std"], self.KrigInfo["y_std"] = standardize(
-                        self.X, self.Y, type=self.standtype.lower(), normy=True)
+                        self.KrigInfo['X'], self.KrigInfo['y'], type=self.standtype.lower(), normy=True)
 
                     self.KrigInfo["norm_y"] = True
                 else:
                     self.KrigInfo["X_norm"], self.KrigInfo["X_mean"], self.KrigInfo["X_std"] = \
-                        standardize(self.X, self.Y, type=self.standtype.lower())
+                        standardize(self.KrigInfo['X'], self.KrigInfo['y'], type=self.standtype.lower())
                     self.KrigInfo["norm_y"] = False
 
                 bound = np.vstack((np.min(self.KrigInfo["X_norm"], axis=0),
@@ -159,7 +159,7 @@ class Kriging:
             self.KrigInfo["F"] = compute_regression_mat(self.KrigInfo["idx"], self.KrigInfo["X"], bound,
                                                         np.ones(shape=[self.KrigInfo["nvar"]]))
 
-    def train(self, loglvl='WARNING', parallel = False):
+    def train(self, loglvl='WARNING', parallel = False, disp=True):
         """
         Train Kriging model
         
@@ -170,7 +170,8 @@ class Kriging:
             None
         """""
         logging.basicConfig(level=loglvl)
-        print("Begin train hyperparam.")
+        if disp:
+            print("Begin train hyperparam.")
 
         # Create multiple starting points
         if self.KrigInfo['nrestart'] < 1:
@@ -193,23 +194,26 @@ class Kriging:
             elif self.KrigInfo["optimizer"] == "cobyla":
                 optimbound = []
                 for i in range(len(self.KrigInfo["ubhyp"])):
-                    optimbound.append(lambda x, Kriginfo, itemp=i: x[itemp] - self.KrigInfo["lbhyp"][itemp])
-                    optimbound.append(lambda x, Kriginfo, itemp=i: self.KrigInfo["ubhyp"][itemp] - x[itemp])
+                    # params aa and bb are not used, just to avoid error in Cobyla optimizer
+                    optimbound.append(lambda x, Kriginfo, aa, bb, itemp=i: x[itemp] - self.KrigInfo["lbhyp"][itemp])
+                    optimbound.append(lambda x, Kriginfo, aa, bb, itemp=i: self.KrigInfo["ubhyp"][itemp] - x[itemp])
             else:
                 optimbound = None
 
-            print(f"Training {self.KrigInfo['nrestart']:.2f} hyperparameter(s)")
+            if disp:
+                print(f"Training {self.KrigInfo['nrestart']} hyperparameter(s)")
 
             # Train hyperparams
-            bestxcand,neglnlikecand = self.parallelopt(xhyp,parallel,optimbound,loglvl)
+            bestxcand,neglnlikecand = self.parallelopt(xhyp,parallel,optimbound,loglvl,disp)
 
             # Search best hyperparams among the candidates
             I = np.argmin(neglnlikecand)
             best_x = bestxcand[I, :]
 
-            print("Single Objective, train hyperparam, end.")
-            print(f"Best hyperparameter is {best_x}")
-            print(f"With NegLnLikelihood of {neglnlikecand[I]}")
+            if disp:
+                print("Single Objective, train hyperparam, end.")
+                print(f"Best hyperparameter is {best_x}")
+                print(f"With NegLnLikelihood of {neglnlikecand[I]}")
 
             # Calculate Kriging model based on the best hyperparam.
             self.KrigInfo = likelihood(best_x,self.KrigInfo,mode='all',trainvar=self.trainvar)
@@ -276,7 +280,7 @@ class Kriging:
         result = prediction(x,self.KrigInfo,predtypes=predtypes)
         return result
 
-    def parallelopt(self,xhyp,parallel,optimbound,loglvl='WARNING'):
+    def parallelopt(self,xhyp,parallel,optimbound,loglvl='WARNING',disp=True):
         """
         Optimize hyperparameter using parallel processing
 
@@ -311,7 +315,8 @@ class Kriging:
             # Calculate hyperparams sequentially
             for ii in range(self.KrigInfo['nrestart']):
 
-                print(f'Training hyperparameter {ii + 1}')
+                if disp:
+                    print(f'Training hyperparameter candidate no.{ii + 1}')
 
                 xhyp_ii = xhyp[ii, :]
                 p = (self.KrigInfo, xhyp_ii, self.trainvar,self.KrigInfo['ubhyp'], self.KrigInfo['lbhyp'],
