@@ -51,7 +51,7 @@ class KPLS(Kriging):
     """
 
     def __init__(self, KrigInfo, ub=5, lb=-5, standardization=False, standtype="default", normy=True,
-                 trainvar=True, disp='WARNING'):
+                 trainvar=True):
         """
         Initialize Kriging model
 
@@ -80,7 +80,7 @@ class KPLS(Kriging):
 
         self.type = 'kpls'
         KrigInfo['type'] = self.type
-        KrigInfo, scaling = kriginfocheck(KrigInfo, lb, ub, self.nbhyp, loglvl=disp)
+        KrigInfo, scaling = kriginfocheck(KrigInfo, lb, ub, self.nbhyp)
         self.KrigInfo = KrigInfo
         self.scaling = scaling  # Scaling for CMA-ES Optimizer, otherwise, unused.
         self.sigmacmaes = (ub - lb) / 5  # Sigma for CMA-ES Optimizer, otherwise, unused.

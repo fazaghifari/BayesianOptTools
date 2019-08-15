@@ -50,7 +50,7 @@ class Kriging:
         """
 
     def __init__(self, KrigInfo, ub=5, lb=-5, standardization=False, standtype="default", normy=True,
-                 trainvar=True, disp='WARNING', inherit=False):
+                 trainvar=True, inherit=False):
         """
         Initialize Kriging model
 
@@ -64,6 +64,11 @@ class Kriging:
             normy (bool): True or False, normalize y or not
             trainvar (bool): True or False, train Kriging variance or not. Defaults to True.
         """
+
+        # Calculate KrigInfo['nsamp'] and KrigInfo['nvar']
+        KrigInfo["nvar"] = np.size(KrigInfo['X'], 1)
+        KrigInfo["nsamp"] = np.size(KrigInfo['X'], 0)
+
         if trainvar is True:
             self.nbhyp = KrigInfo["nvar"] + 1
         else:
@@ -81,7 +86,7 @@ class Kriging:
         if not inherit:
             self.type = 'kriging'
             KrigInfo['type'] = self.type
-            KrigInfo, scaling = kriginfocheck(KrigInfo, lb, ub, self.nbhyp, loglvl=disp)
+            KrigInfo, scaling = kriginfocheck(KrigInfo, lb, ub, self.nbhyp)
             self.KrigInfo = KrigInfo
             self.scaling = scaling  # Scaling for CMA-ES Optimizer, otherwise, unused.
             self.sigmacmaes = (ub-lb)/5  # Sigma for CMA-ES Optimizer, otherwise, unused.
@@ -402,7 +407,7 @@ def tune_hyperparameters(KrigInfo, xhyp_ii, trainvar, ubhyp=None, lbhyp=None,
         res = fmin_cobyla(likelihood, xhyp_ii, optimbound,
                           rhobeg=0.5, rhoend=1e-4, args=(KrigInfo,'default',trainvar))
         bestxcand = res
-        neglnlikecand = likelihood(res, KrigInfo)
+        neglnlikecand = likelihood(res, KrigInfo, trainvar=trainvar)
 
     else:
         msg = (f"{KrigInfo['optimizer']} in KrigInfo['Optimizer'] is not "
@@ -411,7 +416,7 @@ def tune_hyperparameters(KrigInfo, xhyp_ii, trainvar, ubhyp=None, lbhyp=None,
     return bestxcand, neglnlikecand
 
 
-def kriginfocheck(KrigInfo, lb, ub, nbhyp, loglvl='WARNING'):
+def kriginfocheck(KrigInfo, lb, ub, nbhyp):
     """
     Function to check the Kriging information and set Kriging Information to default value if
     required parameters are not supplied.
@@ -427,7 +432,6 @@ def kriginfocheck(KrigInfo, lb, ub, nbhyp, loglvl='WARNING'):
         KrigInfo: Checked/Modified Kriging Information
 
     """
-    logging.basicConfig(level=loglvl)
     eps = np.finfo(float).eps
 
     # Check if number of restart is specified. If not set to 1

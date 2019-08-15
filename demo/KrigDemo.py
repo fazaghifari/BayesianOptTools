@@ -45,7 +45,7 @@ def generate_kriging():
 
     # Run Kriging
     t = time.time()
-    krigobj = Kriging(KrigInfo,standardization=True,standtype='default',normy=False,trainvar=True,disp='INFO')
+    krigobj = Kriging(KrigInfo,standardization=True,standtype='default',normy=False,trainvar=True)
     krigobj.train(parallel=False)
     loocverr,_ = krigobj.loocvcalc()
     elapsed = time.time() - t
