@@ -1,9 +1,6 @@
 import numpy as np
 from misc.sampling.samplingplan import realval
 from testcase.RA.testcase import evaluate
-import matplotlib.pyplot as plt
-from scipy.stats import mode
-import time
 
 
 class AKMCS:
