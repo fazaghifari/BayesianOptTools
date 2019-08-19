@@ -71,7 +71,7 @@ class KPLS(Kriging):
         else:
             self.n_princomp = KrigInfo["n_princomp"]
 
-        super().__init__(KrigInfo, ub, lb , standardization, standtype, normy, trainvar, disp, inherit=True)
+        super().__init__(KrigInfo, ub, lb , standardization, standtype, normy, trainvar, inherit=True)
 
         if trainvar is True:
             self.nbhyp = self.n_princomp + 1

@@ -1,6 +1,7 @@
 import numpy as np
 from misc.sampling.samplingplan import realval
 from testcase.RA.testcase import evaluate
+import time
 
 
 class AKMCS:
@@ -41,9 +42,14 @@ class AKMCS:
         self.Gx = np.zeros(shape=[self.nsamp,1])
         self.sigmaG = np.zeros(shape=[1,self.nsamp])
 
-    def run(self, autoupdate=True, disp=True):
+    def run(self, autoupdate=True, disp=True, savedatato=None):
         """
         Run AKMCS analysis
+
+        Args:
+            autoupdate (bool): Perform automatic update on design space or not. Default to True.
+            disp (bool): Display progress or not. Default to True.
+            savedatato (str): Filename to save update data. e.g.: 'filename.csv'
 
         Return:
              None
@@ -78,6 +84,7 @@ class AKMCS:
         while autoupdate:
             for i in range(self.maxupdate):
                 # Evaluate new samples and append into Kriging object information
+                t = time.time()
                 ynew = evaluate(self.xnew, type=self.akmcsInfo['problem'])
                 self.krigobj.KrigInfo['y'] = np.vstack((self.krigobj.KrigInfo['y'],ynew))
                 self.krigobj.KrigInfo['X'] = np.vstack((self.krigobj.KrigInfo['X'], self.xnew))
@@ -114,6 +121,16 @@ class AKMCS:
                 if disp:
                     print(f"Done iter no: {i+1}, Pf: {self.Pf}, minU: {self.minU}")
 
+                elapsed = time.time() - t
+                if savedatato is not None:
+                    temparray = np.array([i,self.Pf,self.minU,elapsed])
+                    if i == 0:
+                        totaldata = temparray[:]
+                    else:
+                        totaldata = np.vstack((totaldata,temparray))
+                else:
+                    pass
+
                 # Break condition
                 if self.minU >= 2 and i >= 15:
                     break
@@ -126,6 +143,12 @@ class AKMCS:
             else:
                 pass
             break  # temporary break for debugging, delete/comment this line later
+
+        if savedatato is not None:
+            filename = '../innout/'+savedatato
+            np.savetxt(filename,totaldata,delimiter=',',header='iter,Pf,minU,time(s)')
+        else:
+            pass
 
 
     def pfcalc(self):

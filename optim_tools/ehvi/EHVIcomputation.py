@@ -1,21 +1,24 @@
 import numpy as np
-from miscellaneous.surrogate_support.prediction import prediction
 from optim_tools.ehvi.exi2d import exi2d
 
-def ehvicalc(x,ypar,BayesMultiInfo,KrigNewMultiInfo):
+def ehvicalc(x,ypar,moboInfo,kriglist):
     """
-    Wrapper for EHVI calculation
-    :param x: Design Variables
-    :param ypar: Current Pareto Front
-    :param BayesMultiInfo: Structure(Dictionary) containing necessary information for multiobjective Bayesian optimization.
-    :param KrigNewMultiInfo: Structure(Dictionary) containing necessary information for multiobjective Kriging.
-    :return: Hypervolume value
+    Wrapper for EHVI calculation.
+
+    Args:
+        x (nparray): Design Variables
+        ypar (nparray): Current Pareto Front
+        moboInfo (dict): Structure(Dictionary) containing necessary information for multiobjective Bayesian optimization.
+        kriglist (list): List containing Kriging instances.
+
+    Returns:
+        HV (float): EHVI value
     """
-    HV = EHVI(x, ypar, BayesMultiInfo, KrigNewMultiInfo)
+    HV = EHVI(x, ypar, moboInfo, kriglist)
 
     return HV
 
-def EHVI(x,ypar,BayesMultiInfo,KrigNewMultiInfo):
+def EHVI(x,ypar,moboInfo,kriglist):
     """
         ModelInfoKR{i} = Model Information of objective i
         ObjectiveInfoKR{i} = Objective Information of objective i
@@ -24,20 +27,20 @@ def EHVI(x,ypar,BayesMultiInfo,KrigNewMultiInfo):
             - x : Design variables
             - ypar: Current Pareto front
             - BayesMultiInfo: Structure(Dictionary) containing necessary information for multiobjective Bayesian optimization.
-            - KrigMultiInfo: Structure(Dictionary) containing necessary information for multiobjective Kriging.
+            - kriglist (list): List containing Kriging instances.
         """
 
-    X = KrigNewMultiInfo["X"]
-    nobj = len(KrigNewMultiInfo["y"])
+    X = kriglist[0].KrigInfo["X"]
+    nobj = len(kriglist)
     nsamp = np.size(X, 0)
     YO = np.zeros(shape=[nsamp, nobj])
-    RefP = BayesMultiInfo["refpoint"]
+    RefP = moboInfo["refpoint"]
 
     # prediction of each objective
     pred = np.zeros(shape=[nobj])
     SSqr = np.zeros(shape=[nobj])
     for ii in range(0, nobj):
-        pred[ii], SSqr[ii] = prediction(x, KrigNewMultiInfo, ["pred", "SSqr"], num=ii)
+        pred[ii], SSqr[ii] = kriglist[ii].predict(x, ["pred", "SSqr"])
 
     # Compute (negative of) hypervolume
     HV = -1 * exi2d(ypar, RefP, pred, SSqr)

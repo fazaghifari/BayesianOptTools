@@ -1,8 +1,14 @@
 import numpy as np
 from copy import deepcopy
-import math
 import scipy.io as sio
+from testcase.analyticalfcn.cases import evaluate
 from surrogate_models.kriging_model import Kriging
+from surrogate_models.supports.initinfo import copymultiKrigInfo
+from optim_tools import searchpareto
+from optim_tools.parego import paregopre
+from optim_tools.acquifunc_opt import run_single_opt,run_multi_opt
+from surrogate_models.supports.trendfunction import compute_regression_mat
+from surrogate_models.supports.likelihood_func import likelihood
 
 
 class MOBOunc():
@@ -21,7 +27,7 @@ class MOBOunc():
         Metricbest (nparray): Matrix of metric value of final non-dominated solutions after optimization.
     """
 
-    def __init__(self, moboInfo, kriglist, autoupdate=True, multiupdate=0):
+    def __init__(self, moboInfo, kriglist, autoupdate=True, multiupdate=0, savedata=True):
         """
         Initialize MOBOunc class
 
@@ -30,10 +36,219 @@ class MOBOunc():
             kriglist (list): List of Kriging object.
             autoupdate (bool): True or False, depends on your decision to evaluate your function automatically or not.
             multiupdate (int): Number of suggested samples returned for each iteration.
+            savedata (bool): Save data for each iteration or not. Defaults to True.
+
         """
         self.moboInfo = moboinfocheck(moboInfo)
         self.kriglist = kriglist
         self.krignum = len(self.kriglist)
+        self.autoupdate = autoupdate
+        self.multiupdate = multiupdate
+        self.savedata = savedata
+
+    def run(self,disp=True):
+        """
+        Run multi objective unconstrained Bayesian optimization.
+
+        Args:
+            disp (bool): Display process or not. Defaults to True
+
+        Returns:
+            xupdate (nparray): Array of design variables updates.
+            yupdate (nparray): Array of objectives updates
+            metricall (nparray): Array of metric values of the updates.
+
+        """
+
+        self.nup = 0  # Number of current iteration
+        self.Xall = self.kriglist[0].KrigInfo['X']
+        self.yall = np.zeros(shape=[np.size(self.kriglist[0].KrigInfo["y"],axis=0),len(self.kriglist)])
+        for ii in range(np.size(self.yall,axis=1)):
+            self.yall[:,ii] = self.kriglist[ii].KrigInfo["y"]
+        self.ypar,_ = searchpareto.paretopoint(self.yall)
+
+        print("Begin multi-objective Bayesian optimization process.")
+        if self.autoupdate and disp:
+            print(f"Iteration no: {self.nup}, F-count: {np.size(self.Xall,0)}, "
+                  f"Maximum no. updates: {self.moboInfo['nup']}")
+        else:
+            pass
+
+        # If the optimizer is ParEGO, create a scalarized Kriging
+        if self.moboInfo['acquifunc'].lower() == 'parego':
+            self.KrigScalarizedInfo = copymultiKrigInfo(self.kriglist[0].KrigInfo, 0)
+            self.KrigScalarizedInfo['y'] = paregopre(self.yall)
+            self.scalkrig = Kriging(self.KrigScalarizedInfo,standardization=True,standtype='default',normy=False,trainvar=False)
+            self.scalkrig.train()
+        else:
+            pass
+
+        # Perform update on design space
+        if self.moboInfo['acquifunc'].lower() == 'ehvi':
+            self.ehviupdate(disp)
+        elif self.moboInfo['acquifunc'].lower() == 'parego':
+            pass
+        else:
+            raise ValueError(self.moboInfo["acquifunc"], " is not a valid acquisition function.")
+
+        # Finish optimization and return values
+        if disp:
+            print("Optimization finished, now creating the final outputs.")
+
+        xupdate = self.Xall[-self.moboInfo['nup'], :]
+        yupdate = self.yall[-self.moboInfo['nup'], :]
+        metricall = self.metricall
+
+        return xupdate,yupdate,metricall
+
+    def ehviupdate(self, disp):
+        """
+        Update MOBO using EHVI metric.
+
+        Args:
+            disp (bool): Display process or not.
+
+        Returns:
+             None
+        """
+        while self.nup <= self.moboInfo['nup']:
+            # Iteratively update the reference point for hypervolume computation if EHVI is used as the acquisition function
+            if self.moboInfo['refpointtype'].lower() == 'dynamic':
+                self.moboInfo['refpoint'] = np.max(self.yall,0)+(np.max(self.yall,0)-np.min(self.yall,0))*2
+
+            # Perform update(s)
+            if self.multiupdate < 0:
+                raise ValueError("Number of multiple update must be greater or equal to 0")
+            elif self.multiupdate == 0 or self.multiupdate == 1:
+                xnext, metricnext = run_multi_opt(self.kriglist, self.moboInfo, self.ypar)
+                yprednext = np.zeros(shape=[2])
+                for ii,krigobj in enumerate(self.kriglist):
+                    yprednext[ii] = krigobj.predict(xnext,['pred'])
+            else:
+                xnext, yprednext, metricnext = self.simultpredehvi()
+
+            if self.nup == 0:
+                self.metricall = metricnext
+            else:
+                self.metricall = np.vstack((self.metricall,metricnext))
+
+            # Break Loop if auto is false
+            if self.autoupdate is False:
+                break
+            else:
+                pass
+
+            # Evaluate and enrich experimental design
+            self.enrich(xnext)
+
+            # Update number of iterations
+            self.nup += 1
+
+            # Show optimization progress
+            if disp:
+                print(f"Iteration no: {self.nup}, F-count: {np.size(self.Xall, 0)}, "
+                      f"Maximum no. updates: {self.moboInfo['nup']}")
+
+    def paregoupdate(self):
+        pass
+
+    def simultpredehvi(self):
+        """
+        Perform multi updates on EHVI MOBO using Kriging believer method
+
+        Returns:
+             xalltemp (nparray) : Array of design variables updates.
+             yalltemp (nparray) : Array of objectives value updates.
+             metricall (nparray) : Array of metric of the updates.
+        """
+
+        krigtemp = [0]*len(self.kriglist)
+        for index,obj in enumerate(self.kriglist):
+            krigtemp[index] = deepcopy(obj)
+        yprednext = np.zeros(shape=[len(krigtemp)])
+        ypartemp = self.ypar
+
+        for ii in range(self.multiupdate):
+            xnext, metrictemp = run_multi_opt(krigtemp, self.moboInfo, ypartemp)
+            bound = np.vstack((- np.ones(shape=[1, krigtemp[0].KrigInfo["nvar"]]),
+                               np.ones(shape=[1, krigtemp[0].KrigInfo["nvar"]])))
+
+            for jj in range(len(krigtemp)):
+                yprednext[jj] = krigtemp[jj].predict(xnext,'pred')
+                krigtemp[jj].KrigInfo['X'] = np.vstack((krigtemp[jj].KrigInfo['X'], xnext))
+                krigtemp[jj].KrigInfo['y'] = np.vstack((krigtemp[jj].KrigInfo['y'], yprednext[jj]))
+                krigtemp[jj].standardize()
+                krigtemp[jj].KrigInfo["F"] = compute_regression_mat(krigtemp[jj].KrigInfo["idx"],
+                                                                    krigtemp[jj].KrigInfo["X_norm"], bound,
+                                                                    np.ones(shape=[krigtemp[jj].KrigInfo["nvar"]]))
+                krigtemp[jj].KrigInfo = likelihood(krigtemp[jj].KrigInfo['Theta'], krigtemp[jj].KrigInfo, mode='all',
+                                                   trainvar=krigtemp[jj].trainvar)
+
+            if ii == 0:
+                xalltemp = deepcopy(xnext)
+                yalltemp = deepcopy(yprednext)
+                metricall = deepcopy(metrictemp)
+            else:
+                xalltemp = np.vstack((xalltemp,xnext))
+                yalltemp = np.vstack((yalltemp,yprednext))
+                metricall = np.vstack((metricall,metrictemp))
+
+            ypartemp,_ = searchpareto.paretopoint(yalltemp)
+
+        return xalltemp,yalltemp,metricall
+
+    def simultpredparego(self):
+        pass
+
+    def enrich(self,xnext):
+        """
+        Evaluate and enrich experimental design.
+
+        Args:
+            xnext: Next design variable(s) to be evaluated.
+
+        Returns:
+            None
+        """
+        # Evaluate new sample
+        if np.ndim(xnext) == 1:
+            ynext = evaluate(xnext, self.kriglist[0].KrigInfo['problem'])
+        else:
+            ynext = np.zeros(shape=[np.size(xnext, 0), len(self.kriglist)])
+            for ii in range(np.size(xnext,0)):
+                ynext[ii,:] = evaluate(xnext[ii,:],  self.kriglist[0].KrigInfo['problem'])
+
+        # Treatment for failed solutions, Reference : "Forrester, A. I., SÃ³bester, A., & Keane, A. J. (2006). Optimization with missing data.
+        # Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences, 462(2067), 935-945."
+        if np.isnan(ynext).any() is True:
+            for jj in range(len(self.kriglist)):
+                SSqr, y_hat = self.kriglist[jj].predict(xnext, ['SSqr','pred'])
+                ynext[0,jj] = y_hat + SSqr
+
+        # Enrich experimental design
+        self.yall = np.vstack((self.yall, ynext))
+        self.Xall = np.vstack((self.Xall, xnext))
+        ypar,I = searchpareto.paretopoint(self.yall)  # Recompute non-dominated solutions
+
+        if self.moboInfo['acquifunc'] == 'ehvi':
+            for index, krigobj in enumerate(self.kriglist):
+                krigobj.KrigInfo['X'] = self.Xall
+                krigobj.KrigInfo['y'] = self.yall[:,index].reshape(-1,1)
+                krigobj.train(disp=False)
+        elif self.moboInfo['acquifunc'] == 'parego':
+            self.KrigScalarizedInfo['X'] = self.Xall
+            self.KrigScalarizedInfo['y'] = paregopre(self.yall)
+            self.scalkrig = Kriging(self.KrigScalarizedInfo, standardization=True, standtype='default', normy=False,
+                               trainvar=False)
+            self.scalkrig.train()
+        else:
+            raise ValueError(self.moboInfo["acquifunc"], " is not a valid acquisition function.")
+
+        # Save data
+        if self.savedata:
+            I = I.astype(int)
+            Xbest = self.Xall[I,:]
+            sio.savemat(self.moboInfo["filename"],{"xbest":Xbest,"ybest":ypar})
 
 
 def moboinfocheck(moboInfo, autoupdate, krignum):
@@ -69,7 +284,7 @@ def moboinfocheck(moboInfo, autoupdate, krignum):
     else:
         availacqfun = ["ehvi", "parego"]
         if moboInfo["acquifunc"].lower() not in availacqfun:
-            raise TypeError(moboInfo["acquifunc"], " is not a valid acquisition function.")
+            raise ValueError(moboInfo["acquifunc"], " is not a valid acquisition function.")
         else:
             print("The acquisition function is specified to ", moboInfo["acquifunc"], " by user")
 
@@ -78,19 +293,23 @@ def moboinfocheck(moboInfo, autoupdate, krignum):
         moboInfo["krignum"] = krignum
         if "refpoint" not in moboInfo:
             moboInfo["refpointtype"] = 'dynamic'
+        else:
+            refpointavail = ['dynamic','static']
+            if moboInfo["refpointtype"].lower() not in refpointavail:
+                raise ValueError(moboInfo["refpointtype"],' is not valid type')
     elif moboInfo["acquifunc"].lower() == "parego":
         moboInfo["krignum"] = 1
         if "paregoacquifunc" not in moboInfo:
             moboInfo["paregoacquifunc"] = "EI"
 
-    # If moboInfo.acquifuncopt (optimizer for the acquisition function) is not specified set to 'sampling+cmaes'
+    # If moboInfo['acquifuncopt'] (optimizer for the acquisition function) is not specified set to 'sampling+cmaes'
     if "acquifuncopt" not in moboInfo:
-        moboInfo["acquifuncopt"] = "sampling+cmaes"
-        print("The acquisition function optimizer is not specified, set to sampling+cmaes.")
+        moboInfo["acquifuncopt"] = "lbfgsb"
+        print("The acquisition function optimizer is not specified, set to L-BFGS-B.")
     else:
-        availableacqoptimizer = ['sampling+cmaes', 'sampling+fmincon', 'cmaes', 'fmincon']
+        availableacqoptimizer = ['lbfgsb', 'cobyla', 'cmaes']
         if moboInfo["acquifuncopt"].lower() not in availableacqoptimizer:
-            raise TypeError(moboInfo["acquifuncopt"], " is not a valid acquisition function optimizer.")
+            raise ValueError(moboInfo["acquifuncopt"], " is not a valid acquisition function optimizer.")
         else:
             print("The acquisition function optimizer is specified to ", moboInfo["acquifuncopt"], " by user")
 

@@ -169,7 +169,8 @@ class Kriging:
         Train Kriging model
         
         Args:
-            loglvl (str): level of logging function.
+            parallel (bool): Parallel processing or not. Default to False.
+            disp (bool): Display process or not. Default to True.
             
         Returns:
             None
