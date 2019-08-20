@@ -43,7 +43,7 @@ class MOBO():
             chpconst (list): List of cheap constraint function.
 
         """
-        self.moboInfo = moboinfocheck(moboInfo)
+        self.moboInfo = moboinfocheck(moboInfo, autoupdate)
         self.kriglist = kriglist
         self.krignum = len(self.kriglist)
         self.autoupdate = autoupdate
@@ -70,12 +70,12 @@ class MOBO():
         self.Xall = self.kriglist[0].KrigInfo['X']
         self.yall = np.zeros(shape=[np.size(self.kriglist[0].KrigInfo["y"],axis=0),len(self.kriglist)])
         for ii in range(np.size(self.yall,axis=1)):
-            self.yall[:,ii] = self.kriglist[ii].KrigInfo["y"]
+            self.yall[:,ii] = self.kriglist[ii].KrigInfo["y"][:,0]
         self.ypar,_ = searchpareto.paretopoint(self.yall)
 
         print("Begin multi-objective Bayesian optimization process.")
         if self.autoupdate and disp:
-            print(f"Iteration no: {self.nup}, F-count: {np.size(self.Xall,0)}, "
+            print(f"Iteration no: {self.nup+1}, F-count: {np.size(self.Xall,0)}, "
                   f"Maximum no. updates: {self.moboInfo['nup']}")
         else:
             pass
@@ -86,6 +86,7 @@ class MOBO():
             self.KrigScalarizedInfo['y'] = paregopre(self.yall)
             self.scalkrig = Kriging(self.KrigScalarizedInfo,standardization=True,standtype='default',normy=False,
                                     trainvar=False)
+            self.scalkrig.standardize()
             self.scalkrig.train(disp=False)
         else:
             pass
@@ -102,8 +103,12 @@ class MOBO():
         if disp:
             print("Optimization finished, now creating the final outputs.")
 
-        xupdate = self.Xall[-self.moboInfo['nup'], :]
-        yupdate = self.yall[-self.moboInfo['nup'], :]
+        if self.multiupdate == 0 or self.multiupdate == 1:
+            xupdate = self.Xall[-self.moboInfo['nup']:, :]
+            yupdate = self.yall[-self.moboInfo['nup']:, :]
+        else:
+            xupdate = self.Xall[(-self.moboInfo['nup']*self.multiupdate):, :]
+            yupdate = self.yall[(-self.moboInfo['nup']*self.multiupdate):, :]
         metricall = self.metricall
 
         return xupdate,yupdate,metricall
@@ -119,7 +124,7 @@ class MOBO():
         Returns:
              None
         """
-        while self.nup <= self.moboInfo['nup']:
+        while self.nup < self.moboInfo['nup']:
             # Iteratively update the reference point for hypervolume computation if EHVI is used as the acquisition function
             if self.moboInfo['refpointtype'].lower() == 'dynamic':
                 self.moboInfo['refpoint'] = np.max(self.yall,0)+(np.max(self.yall,0)-np.min(self.yall,0))*2
@@ -134,7 +139,7 @@ class MOBO():
                 for ii,krigobj in enumerate(self.kriglist):
                     yprednext[ii] = krigobj.predict(xnext,['pred'])
             else:
-                xnext, yprednext, metricnext = self.simultpredehvi()
+                xnext, yprednext, metricnext = self.simultpredehvi(disp)
 
             if self.nup == 0:
                 self.metricall = metricnext
@@ -155,7 +160,7 @@ class MOBO():
 
             # Show optimization progress
             if disp:
-                print(f"Iteration no: {self.nup}, F-count: {np.size(self.Xall, 0)}, "
+                print(f"Iteration no: {self.nup+1}, F-count: {np.size(self.Xall, 0)}, "
                       f"Maximum no. updates: {self.moboInfo['nup']}")
 
 
@@ -169,7 +174,7 @@ class MOBO():
         Returns:
              None
         """
-        while self.nup <= self.moboInfo['nup']:
+        while self.nup < self.moboInfo['nup']:
             # Perform update(s)
             if self.multiupdate < 0:
                 raise ValueError("Number of multiple update must be greater or equal to 0")
@@ -200,11 +205,11 @@ class MOBO():
 
             # Show optimization progress
             if disp:
-                print(f"Iteration no: {self.nup}, F-count: {np.size(self.Xall, 0)}, "
+                print(f"Iteration no: {self.nup+1}, F-count: {np.size(self.Xall, 0)}, "
                       f"Maximum no. updates: {self.moboInfo['nup']}")
 
 
-    def simultpredehvi(self):
+    def simultpredehvi(self,disp=False):
         """
         Perform multi updates on EHVI MOBO using Kriging believer method.
 
@@ -219,9 +224,14 @@ class MOBO():
             krigtemp[index] = deepcopy(obj)
         yprednext = np.zeros(shape=[len(krigtemp)])
         ypartemp = self.ypar
+        yall = self.yall
 
         for ii in range(self.multiupdate):
-            print(f"update number {ii+1}")
+            if disp:
+                print(f"update number {ii+1}")
+            else:
+                pass
+
             xnext, metrictemp = run_multi_opt(krigtemp, self.moboInfo, ypartemp, self.krigconstlist,
                                               self.cheapconstlist)
             bound = np.vstack((- np.ones(shape=[1, krigtemp[0].KrigInfo["nvar"]]),
@@ -247,7 +257,8 @@ class MOBO():
                 yalltemp = np.vstack((yalltemp,yprednext))
                 metricall = np.vstack((metricall,metrictemp))
 
-            ypartemp,_ = searchpareto.paretopoint(yalltemp)
+            yall = np.vstack((yall,yprednext))
+            ypartemp,_ = searchpareto.paretopoint(yall)
 
         return xalltemp,yalltemp,metricall
 
@@ -271,6 +282,7 @@ class MOBO():
             scalinfotemp['y'] = (yalltemp,idx)
             krigtemp = Kriging(scalinfotemp, standardization=True, standtype='default', normy=False,
                                trainvar=False)
+            krigtemp.standardize()
             krigtemp.train(disp=False)
             xnext, metricnext = run_single_opt(krigtemp,self.moboInfo,self.krigconstlist,self.cheapconstlist)
             for jj, krigobj in enumerate(self.kriglist):
@@ -315,19 +327,21 @@ class MOBO():
         # Enrich experimental design
         self.yall = np.vstack((self.yall, ynext))
         self.Xall = np.vstack((self.Xall, xnext))
-        ypar,I = searchpareto.paretopoint(self.yall)  # Recompute non-dominated solutions
+        self.ypar,I = searchpareto.paretopoint(self.yall)  # Recompute non-dominated solutions
 
         if self.moboInfo['acquifunc'] == 'ehvi':
             for index, krigobj in enumerate(self.kriglist):
                 krigobj.KrigInfo['X'] = self.Xall
                 krigobj.KrigInfo['y'] = self.yall[:,index].reshape(-1,1)
+                krigobj.standardize()
                 krigobj.train(disp=False)
         elif self.moboInfo['acquifunc'] == 'parego':
             self.KrigScalarizedInfo['X'] = self.Xall
             self.KrigScalarizedInfo['y'] = paregopre(self.yall)
             self.scalkrig = Kriging(self.KrigScalarizedInfo, standardization=True, standtype='default', normy=False,
                                trainvar=False)
-            self.scalkrig.train()
+            self.scalkrig.standardize()
+            self.scalkrig.train(disp=False)
         else:
             raise ValueError(self.moboInfo["acquifunc"], " is not a valid acquisition function.")
 
@@ -335,10 +349,10 @@ class MOBO():
         if self.savedata:
             I = I.astype(int)
             Xbest = self.Xall[I,:]
-            sio.savemat(self.moboInfo["filename"],{"xbest":Xbest,"ybest":ypar})
+            sio.savemat(self.moboInfo["filename"],{"xbest":Xbest,"ybest":self.ypar})
 
 
-def moboinfocheck(moboInfo, autoupdate, krignum):
+def moboinfocheck(moboInfo, autoupdate):
     """
     Function to check the MOBO information and set MOBO Information to default value if
     required parameters are not supplied.
@@ -377,7 +391,6 @@ def moboinfocheck(moboInfo, autoupdate, krignum):
 
     # Set necessary params for multiobjective acquisition function
     if moboInfo["acquifunc"].lower() == "ehvi":
-        moboInfo["krignum"] = krignum
         if "refpoint" not in moboInfo:
             moboInfo["refpointtype"] = 'dynamic'
         else:
