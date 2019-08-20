@@ -11,15 +11,17 @@ from surrogate_models.supports.trendfunction import compute_regression_mat
 from surrogate_models.supports.likelihood_func import likelihood
 
 
-class MOBOunc():
+class MOBO():
     """
-    Perform unconstrained multi-objective Bayesian Optimization
+    Perform multi-objective Bayesian Optimization
 
     Args:
         moboInfo (dict): Dictionary containing necessary information for multi-objective Bayesian optimization.
         kriglist (list): List of Kriging object.
         autoupdate (bool): True or False, depends on your decision to evaluate your function automatically or not.
         multiupdate (int): Number of suggested samples returned for each iteration.
+        expconst (list): List of constraints Kriging object.
+        chpconst (list): List of cheap constraint function.
 
     Returns:
         Xbest (nparray): Matrix of final non-dominated solutions observed after optimization.
@@ -27,9 +29,9 @@ class MOBOunc():
         Metricbest (nparray): Matrix of metric value of final non-dominated solutions after optimization.
     """
 
-    def __init__(self, moboInfo, kriglist, autoupdate=True, multiupdate=0, savedata=True):
+    def __init__(self, moboInfo, kriglist, autoupdate=True, multiupdate=0, savedata=True, expconst=None, chpconst=None):
         """
-        Initialize MOBOunc class
+        Initialize MOBO class
 
         Args:
             moboInfo (dict): Dictionary containing necessary information for multi-objective Bayesian optimization.
@@ -37,6 +39,8 @@ class MOBOunc():
             autoupdate (bool): True or False, depends on your decision to evaluate your function automatically or not.
             multiupdate (int): Number of suggested samples returned for each iteration.
             savedata (bool): Save data for each iteration or not. Defaults to True.
+            expconst (list): List of constraints Kriging object.
+            chpconst (list): List of cheap constraint function.
 
         """
         self.moboInfo = moboinfocheck(moboInfo)
@@ -45,6 +49,8 @@ class MOBOunc():
         self.autoupdate = autoupdate
         self.multiupdate = multiupdate
         self.savedata = savedata
+        self.krigconstlist = expconst
+        self.cheapconstlist = chpconst
 
     def run(self,disp=True):
         """
@@ -78,8 +84,9 @@ class MOBOunc():
         if self.moboInfo['acquifunc'].lower() == 'parego':
             self.KrigScalarizedInfo = copymultiKrigInfo(self.kriglist[0].KrigInfo, 0)
             self.KrigScalarizedInfo['y'] = paregopre(self.yall)
-            self.scalkrig = Kriging(self.KrigScalarizedInfo,standardization=True,standtype='default',normy=False,trainvar=False)
-            self.scalkrig.train()
+            self.scalkrig = Kriging(self.KrigScalarizedInfo,standardization=True,standtype='default',normy=False,
+                                    trainvar=False)
+            self.scalkrig.train(disp=False)
         else:
             pass
 
@@ -87,7 +94,7 @@ class MOBOunc():
         if self.moboInfo['acquifunc'].lower() == 'ehvi':
             self.ehviupdate(disp)
         elif self.moboInfo['acquifunc'].lower() == 'parego':
-            pass
+            self.paregoupdate(disp)
         else:
             raise ValueError(self.moboInfo["acquifunc"], " is not a valid acquisition function.")
 
@@ -101,9 +108,10 @@ class MOBOunc():
 
         return xupdate,yupdate,metricall
 
+
     def ehviupdate(self, disp):
         """
-        Update MOBO using EHVI metric.
+        Update MOBO using EHVI algorithm.
 
         Args:
             disp (bool): Display process or not.
@@ -120,7 +128,8 @@ class MOBOunc():
             if self.multiupdate < 0:
                 raise ValueError("Number of multiple update must be greater or equal to 0")
             elif self.multiupdate == 0 or self.multiupdate == 1:
-                xnext, metricnext = run_multi_opt(self.kriglist, self.moboInfo, self.ypar)
+                xnext, metricnext = run_multi_opt(self.kriglist, self.moboInfo, self.ypar, self.krigconstlist,
+                                                  self.cheapconstlist)
                 yprednext = np.zeros(shape=[2])
                 for ii,krigobj in enumerate(self.kriglist):
                     yprednext[ii] = krigobj.predict(xnext,['pred'])
@@ -149,12 +158,55 @@ class MOBOunc():
                 print(f"Iteration no: {self.nup}, F-count: {np.size(self.Xall, 0)}, "
                       f"Maximum no. updates: {self.moboInfo['nup']}")
 
-    def paregoupdate(self):
-        pass
+
+    def paregoupdate(self, disp):
+        """
+        Update MOBO using ParEGO algorithm.
+
+        Args:
+            disp (bool): Display process or not.
+
+        Returns:
+             None
+        """
+        while self.nup <= self.moboInfo['nup']:
+            # Perform update(s)
+            if self.multiupdate < 0:
+                raise ValueError("Number of multiple update must be greater or equal to 0")
+            elif self.multiupdate == 0 or self.multiupdate == 1:
+                xnext, metricnext = run_single_opt(self.scalkrig,self.moboInfo,self.krigconstlist,self.cheapconstlist)
+                yprednext = np.zeros(shape=[2])
+                for ii, krigobj in enumerate(self.kriglist):
+                    yprednext[ii] = krigobj.predict(xnext, ['pred'])
+            else:
+                xnext, yprednext, metricnext = self.simultpredparego()
+
+            if self.nup == 0:
+                self.metricall = metricnext
+            else:
+                self.metricall = np.vstack((self.metricall,metricnext))
+
+            # Break Loop if auto is false
+            if self.autoupdate is False:
+                break
+            else:
+                pass
+
+            # Evaluate and enrich experimental design
+            self.enrich(xnext)
+
+            # Update number of iterations
+            self.nup += 1
+
+            # Show optimization progress
+            if disp:
+                print(f"Iteration no: {self.nup}, F-count: {np.size(self.Xall, 0)}, "
+                      f"Maximum no. updates: {self.moboInfo['nup']}")
+
 
     def simultpredehvi(self):
         """
-        Perform multi updates on EHVI MOBO using Kriging believer method
+        Perform multi updates on EHVI MOBO using Kriging believer method.
 
         Returns:
              xalltemp (nparray) : Array of design variables updates.
@@ -169,7 +221,9 @@ class MOBOunc():
         ypartemp = self.ypar
 
         for ii in range(self.multiupdate):
-            xnext, metrictemp = run_multi_opt(krigtemp, self.moboInfo, ypartemp)
+            print(f"update number {ii+1}")
+            xnext, metrictemp = run_multi_opt(krigtemp, self.moboInfo, ypartemp, self.krigconstlist,
+                                              self.cheapconstlist)
             bound = np.vstack((- np.ones(shape=[1, krigtemp[0].KrigInfo["nvar"]]),
                                np.ones(shape=[1, krigtemp[0].KrigInfo["nvar"]])))
 
@@ -197,8 +251,41 @@ class MOBOunc():
 
         return xalltemp,yalltemp,metricall
 
+
     def simultpredparego(self):
-        pass
+        """
+        Perform multi updates on ParEGO MOBO by varying the weighting function.
+
+        Returns:
+             xalltemp (nparray) : Array of design variables updates.
+             yalltemp (nparray) : Array of objectives value updates.
+             metricall (nparray) : Array of metric of the updates.
+        """
+        idxs = np.random.choice(11, self.multiupdate)
+        scalinfotemp = deepcopy(self.KrigScalarizedInfo)
+        yalltemp = self.yall[:,:]
+        yprednext = np.zeros(shape=[len(self.kriglist)])
+
+        for ii,idx in enumerate(idxs):
+            print(f"update number {ii + 1}")
+            scalinfotemp['y'] = (yalltemp,idx)
+            krigtemp = Kriging(scalinfotemp, standardization=True, standtype='default', normy=False,
+                               trainvar=False)
+            krigtemp.train(disp=False)
+            xnext, metricnext = run_single_opt(krigtemp,self.moboInfo,self.krigconstlist,self.cheapconstlist)
+            for jj, krigobj in enumerate(self.kriglist):
+                yprednext[jj] = krigobj.predict(xnext, ['pred'])
+            if ii == 0:
+                xalltemp = deepcopy(xnext)
+                yalltemp = deepcopy(yprednext)
+                metricall = deepcopy(metricnext)
+            else:
+                xalltemp = np.vstack((xalltemp, xnext))
+                yalltemp = np.vstack((yalltemp, yprednext))
+                metricall = np.vstack((metricall, metricnext))
+
+        return xalltemp, yalltemp, metricall
+
 
     def enrich(self,xnext):
         """
