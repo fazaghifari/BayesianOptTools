@@ -9,7 +9,7 @@ from copy import deepcopy
 
 def generate_kriging():
     # Sampling
-    nsample = 25
+    nsample = 20
     nvar = 2
     nobj = 2
     lb = -1 * np.ones(shape=[nvar])
@@ -53,12 +53,12 @@ def generate_kriging():
 
 def runopt(krigobj1, krigobj2):
     moboInfo = dict()
-    moboInfo["nup"] = 15
+    moboInfo["nup"] = 3
     moboInfo["nrestart"] = 10
-    moboInfo["acquifunc"] = "ehvi"
+    moboInfo["acquifunc"] = "parego"
     moboInfo["acquifuncopt"] = "lbfgsb"
 
-    Optim = MOBO(moboInfo,[krigobj1,krigobj2],autoupdate=True,multiupdate=0)
+    Optim = MOBO(moboInfo,[krigobj1,krigobj2],autoupdate=True,multiupdate=5)
     xupdate,yupdate,metricall = Optim.run(disp=True)
 
     return xupdate,yupdate,metricall

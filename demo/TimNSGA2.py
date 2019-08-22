@@ -66,6 +66,7 @@ class Hispeedplane(Problem):
         loocverr3, _ = self.krigconst.loocvcalc()
 
     def geomconst(self,vars):
+        # This constraint function should return 1 if the constraint is satisfied and 0 if not.
         vars = np.array(vars)
         tip_angle = sweepdiffcheck.sweep_diff(vars[2], vars[4], 0.00165529)
         stat = sweepdiffcheck.min_angle_violated(tip_angle, 7)

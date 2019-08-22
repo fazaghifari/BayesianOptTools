@@ -449,7 +449,6 @@ def kriginfocheck(KrigInfo, lb, ub, nbhyp):
         availoptmzr = ["lbfgsb", "cmaes", "cobyla", "slsqp"]  # check if the specified optimizer is available
         if KrigInfo['optimizer'].lower() not in availoptmzr:
             raise ValueError(KrigInfo["optimizer"], " is not a valid optimizer.")
-        print(f"The acquisition function is specified to  {KrigInfo['optimizer']}, by user")
 
     # Check if Trend order is specified. If not set to zero
     if 'TrendOrder' not in KrigInfo:
@@ -494,6 +493,13 @@ def kriginfocheck(KrigInfo, lb, ub, nbhyp):
         pass
     else:
         print("Check kriging_model.py line 485!")
+
+    if 'limit' in KrigInfo:
+        if 'limittype' not in KrigInfo:
+            KrigInfo['limittype'] = '>='
+            print("KrigInfo['limittype'] is set to greater than equal'>='.")
+        else:
+            pass
 
     # Check overall hyperparam
     lbhyp = lb * np.ones(shape=[nbhyp])

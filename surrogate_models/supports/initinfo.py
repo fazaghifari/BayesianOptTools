@@ -162,7 +162,8 @@ def copymultiKrigInfo(KrigMultiInfo, num):
     KrigNewInfo['lb'] = KrigMultiInfo['lb']
     KrigNewInfo['kernel'] = KrigMultiInfo['kernel']
     KrigNewInfo['nugget'] = KrigMultiInfo['nugget']
-    keys = ['Theta', 'U', 'Psi', 'BE', 'y_mean', 'y_std', 'SigmaSqr', 'idx', 'F', 'wgkf', 'plscoeff', 'y_norm',"NegLnLike"]
+    KrigNewInfo['optimizer'] = KrigMultiInfo['optimizer']
+    keys = ['Theta', 'U', 'Psi', 'BE', 'y_mean', 'y_std', 'SigmaSqr', 'idx', 'F', 'wgkf', 'plscoeff',"NegLnLike"]
     for key in keys:
         KrigNewInfo[key] = KrigMultiInfo[key][num]
 

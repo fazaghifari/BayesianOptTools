@@ -230,7 +230,7 @@ def singleconstfun(x, krigobj, acquifunc, krigconstlist=None, cheapconstlist=Non
         pof = np.zeros(shape=[nkrigcon])
         for ii in range(nkrigcon):
             pof[ii] = krigconstlist[ii].predict(x, 'PoF')
-        pof = np.prod(pof,1)
+        pof = np.prod(pof)
 
     else:
         pof = 1
@@ -248,7 +248,7 @@ def singleconstfun(x, krigobj, acquifunc, krigconstlist=None, cheapconstlist=Non
         coeff = np.zeros(shape=[len(cheapconstlist)])
         for jj in range(len(cheapconstlist)):
             coeff[jj] = cheapconstlist[jj](x)
-        coeff = np.prod(coeff,1)
+        coeff = np.prod(coeff)
 
     fx = pof*coeff*acquifuncval
 
@@ -291,7 +291,7 @@ def multiconstfun(x, ypar, kriglist, moboInfo, krigconstlist=None, cheapconstlis
         pof = np.zeros(shape=[nkrigcon])
         for ii in range(nkrigcon):
             pof[ii] = krigconstlist[ii].predict(x, 'PoF')
-        pof = np.prod(pof,1)
+        pof = np.prod(pof)
 
     else:
         pof = 1
@@ -309,7 +309,7 @@ def multiconstfun(x, ypar, kriglist, moboInfo, krigconstlist=None, cheapconstlis
         coeff = np.zeros(shape=[len(cheapconstlist)])
         for jj in range(len(cheapconstlist)):
             coeff[jj] = cheapconstlist[jj](x)
-        coeff = np.prod(coeff,1)
+        coeff = np.prod(coeff)
 
     metric = acqufunhandle(x, ypar, moboInfo, kriglist)
 

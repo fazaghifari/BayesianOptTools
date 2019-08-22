@@ -75,8 +75,8 @@ class MOBO():
 
         print("Begin multi-objective Bayesian optimization process.")
         if self.autoupdate and disp:
-            print(f"Iteration no: {self.nup+1}, F-count: {np.size(self.Xall,0)}, "
-                  f"Maximum no. updates: {self.moboInfo['nup']}")
+            print(f"Update no.: {self.nup+1}, F-count: {np.size(self.Xall,0)}, "
+                  f"Maximum no. updates: {self.moboInfo['nup']+1}")
         else:
             pass
 
@@ -86,7 +86,6 @@ class MOBO():
             self.KrigScalarizedInfo['y'] = paregopre(self.yall)
             self.scalkrig = Kriging(self.KrigScalarizedInfo,standardization=True,standtype='default',normy=False,
                                     trainvar=False)
-            self.scalkrig.standardize()
             self.scalkrig.train(disp=False)
         else:
             pass
@@ -148,6 +147,8 @@ class MOBO():
 
             # Break Loop if auto is false
             if self.autoupdate is False:
+                self.Xall = np.vstack((self.Xall, xnext))
+                self.yall = np.vstack((self.yall, yprednext))
                 break
             else:
                 pass
@@ -160,8 +161,8 @@ class MOBO():
 
             # Show optimization progress
             if disp:
-                print(f"Iteration no: {self.nup+1}, F-count: {np.size(self.Xall, 0)}, "
-                      f"Maximum no. updates: {self.moboInfo['nup']}")
+                print(f"Update no.: {self.nup+1}, F-count: {np.size(self.Xall, 0)}, "
+                      f"Maximum no. updates: {self.moboInfo['nup']+1}")
 
 
     def paregoupdate(self, disp):
@@ -193,6 +194,8 @@ class MOBO():
 
             # Break Loop if auto is false
             if self.autoupdate is False:
+                self.Xall = np.vstack((self.Xall, xnext))
+                self.yall = np.vstack((self.yall, yprednext))
                 break
             else:
                 pass
@@ -205,8 +208,8 @@ class MOBO():
 
             # Show optimization progress
             if disp:
-                print(f"Iteration no: {self.nup+1}, F-count: {np.size(self.Xall, 0)}, "
-                      f"Maximum no. updates: {self.moboInfo['nup']}")
+                print(f"Update no.: {self.nup+1}, F-count: {np.size(self.Xall, 0)}, "
+                      f"Maximum no. updates: {self.moboInfo['nup']+1}")
 
 
     def simultpredehvi(self,disp=False):
@@ -274,29 +277,33 @@ class MOBO():
         """
         idxs = np.random.choice(11, self.multiupdate)
         scalinfotemp = deepcopy(self.KrigScalarizedInfo)
+        xalltemp = self.Xall[:,:]
         yalltemp = self.yall[:,:]
         yprednext = np.zeros(shape=[len(self.kriglist)])
 
         for ii,idx in enumerate(idxs):
             print(f"update number {ii + 1}")
-            scalinfotemp['y'] = (yalltemp,idx)
+            scalinfotemp['X'] = xalltemp
+            scalinfotemp['y'] = paregopre(yalltemp,idx)
             krigtemp = Kriging(scalinfotemp, standardization=True, standtype='default', normy=False,
                                trainvar=False)
-            krigtemp.standardize()
             krigtemp.train(disp=False)
             xnext, metricnext = run_single_opt(krigtemp,self.moboInfo,self.krigconstlist,self.cheapconstlist)
             for jj, krigobj in enumerate(self.kriglist):
                 yprednext[jj] = krigobj.predict(xnext, ['pred'])
             if ii == 0:
-                xalltemp = deepcopy(xnext)
-                yalltemp = deepcopy(yprednext)
+                xallnext = deepcopy(xnext)
+                yallnext = deepcopy(yprednext)
                 metricall = deepcopy(metricnext)
             else:
-                xalltemp = np.vstack((xalltemp, xnext))
-                yalltemp = np.vstack((yalltemp, yprednext))
+                xallnext = np.vstack((xallnext, xnext))
+                yallnext = np.vstack((yallnext, yprednext))
                 metricall = np.vstack((metricall, metricnext))
 
-        return xalltemp, yalltemp, metricall
+        yalltemp = np.vstack((yalltemp,yprednext))
+        xalltemp = np.vstack((xalltemp,xnext))
+
+        return xallnext, yallnext, metricall
 
 
     def enrich(self,xnext):
@@ -340,8 +347,12 @@ class MOBO():
             self.KrigScalarizedInfo['y'] = paregopre(self.yall)
             self.scalkrig = Kriging(self.KrigScalarizedInfo, standardization=True, standtype='default', normy=False,
                                trainvar=False)
-            self.scalkrig.standardize()
             self.scalkrig.train(disp=False)
+            for index, krigobj in enumerate(self.kriglist):
+                krigobj.KrigInfo['X'] = self.Xall
+                krigobj.KrigInfo['y'] = self.yall[:,index].reshape(-1,1)
+                krigobj.standardize()
+                krigobj.train(disp=False)
         else:
             raise ValueError(self.moboInfo["acquifunc"], " is not a valid acquisition function.")
 
@@ -387,16 +398,20 @@ def moboinfocheck(moboInfo, autoupdate):
         if moboInfo["acquifunc"].lower() not in availacqfun:
             raise ValueError(moboInfo["acquifunc"], " is not a valid acquisition function.")
         else:
-            print("The acquisition function is specified to ", moboInfo["acquifunc"], " by user")
+            pass
 
     # Set necessary params for multiobjective acquisition function
     if moboInfo["acquifunc"].lower() == "ehvi":
         if "refpoint" not in moboInfo:
             moboInfo["refpointtype"] = 'dynamic'
         else:
+            moboInfo["refpointtype"] = 'static'
+        
+        if 'refpointtype' in moboInfo:
             refpointavail = ['dynamic','static']
             if moboInfo["refpointtype"].lower() not in refpointavail:
                 raise ValueError(moboInfo["refpointtype"],' is not valid type')
+
     elif moboInfo["acquifunc"].lower() == "parego":
         moboInfo["krignum"] = 1
         if "paregoacquifunc" not in moboInfo:
@@ -411,7 +426,7 @@ def moboinfocheck(moboInfo, autoupdate):
         if moboInfo["acquifuncopt"].lower() not in availableacqoptimizer:
             raise ValueError(moboInfo["acquifuncopt"], " is not a valid acquisition function optimizer.")
         else:
-            print("The acquisition function optimizer is specified to ", moboInfo["acquifuncopt"], " by user")
+            pass
 
     if "nrestart" not in moboInfo:
         moboInfo["nrestart"] = 1

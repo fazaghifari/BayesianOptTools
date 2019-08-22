@@ -259,11 +259,16 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
                                       * (np.min(y) - f) / np.transpose(s))
             output = -ProbImp
         elif pred.lower() == 'pof':
-            ProbFeas = 0.5 + 0.5 * erf(1 / np.sqrt(2)
-                                       * ((f - KrigInfo['limit'])
-                                          / np.transpose(s)))
-            # if ProbFeas != 1. :
-            #     print("ProbFeas = ", ProbFeas, " f = ", f)
+            if KrigInfo['limittype'] == '>' or KrigInfo['limittype'] == '>=':
+                ProbFeas = 0.5 + 0.5 * erf(1 / np.sqrt(2)
+                                           * ((f - KrigInfo['limit'])
+                                              / np.transpose(s)))
+            elif KrigInfo['limittype'] == '<' or KrigInfo['limittype'] == '<=':
+                ProbFeas = 0.5 + 0.5 * erf(1 / np.sqrt(2)
+                                           * ((KrigInfo['limit'] - f)
+                                              / np.transpose(s)))
+            else:
+                raise ValueError('Limit Type is not available yet!')
             output = ProbFeas
         else:
             msg = f"Specified prediction type: '{pred}' is not recognised."
