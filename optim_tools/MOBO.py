@@ -3,7 +3,6 @@ from copy import deepcopy
 import scipy.io as sio
 from testcase.analyticalfcn.cases import evaluate
 from surrogate_models.kriging_model import Kriging
-from surrogate_models.supports.initinfo import copymultiKrigInfo
 from optim_tools import searchpareto
 from optim_tools.parego import paregopre
 from optim_tools.acquifunc_opt import run_single_opt,run_multi_opt
@@ -11,7 +10,7 @@ from surrogate_models.supports.trendfunction import compute_regression_mat
 from surrogate_models.supports.likelihood_func import likelihood
 
 
-class MOBO():
+class MOBO:
     """
     Perform multi-objective Bayesian Optimization
 
@@ -24,9 +23,9 @@ class MOBO():
         chpconst (list): List of cheap constraint function.
 
     Returns:
-        Xbest (nparray): Matrix of final non-dominated solutions observed after optimization.
-        Ybest (nparray): Matrix of responses of final non-dominated solutions after optimization.
-        Metricbest (nparray): Matrix of metric value of final non-dominated solutions after optimization.
+        xupdate (nparray): Array of design variables updates.
+        yupdate (nparray): Array of objectives updates
+        metricall (nparray): Array of metric values of the updates.
     """
 
     def __init__(self, moboInfo, kriglist, autoupdate=True, multiupdate=0, savedata=True, expconst=None, chpconst=None):
@@ -82,7 +81,7 @@ class MOBO():
 
         # If the optimizer is ParEGO, create a scalarized Kriging
         if self.moboInfo['acquifunc'].lower() == 'parego':
-            self.KrigScalarizedInfo = copymultiKrigInfo(self.kriglist[0].KrigInfo, 0)
+            self.KrigScalarizedInfo = deepcopy(self.kriglist[0].KrigInfo)
             self.KrigScalarizedInfo['y'] = paregopre(self.yall)
             self.scalkrig = Kriging(self.KrigScalarizedInfo,standardization=True,standtype='default',normy=False,
                                     trainvar=False)

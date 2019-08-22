@@ -6,13 +6,13 @@ from misc.constfunc import sweepdiffcheck,FoongConst
 import cma
 
 
-def run_single_opt(krigobj, moboInfo, krigconstlist=None, cheapconstlist=None):
+def run_single_opt(krigobj, soboInfo, krigconstlist=None, cheapconstlist=None):
     """
    Run the optimization of multi-objective acquisition function to find the next sampling point.
 
    Args:
      krigobj (object): Kriging object.
-     moboInfo (dict): A structure containing necessary information for Bayesian optimization.
+     soboInfo (dict): A structure containing necessary information for Bayesian optimization.
      krigconstlist (list): List of Kriging object for constraints. Defaults to None.
      cheapconstlist (list): List of constraints function. Defaults to None.
             Expected output of the constraint functions is 1 if the constraint is satisfied and 0 if not.
@@ -25,21 +25,21 @@ def run_single_opt(krigobj, moboInfo, krigconstlist=None, cheapconstlist=None):
    The available optimizers for the acquisition function are 'cmaes', 'lbfgsb', 'cobyla'.
    Note that this function runs for both unconstrained and constrained single-objective Bayesian optimization.
    """
-    acquifuncopt = moboInfo["acquifuncopt"]
-    acquifunc = moboInfo["acquifunc"]
+    acquifuncopt = soboInfo["acquifuncopt"]
+    acquifunc = soboInfo["acquifunc"]
 
     if acquifunc.lower() == 'parego':
-        acquifunc = moboInfo['paregoacquifunc']
+        acquifunc = soboInfo['paregoacquifunc']
     else:
         pass
 
     if acquifuncopt.lower() == 'cmaes':
         Xrand = realval(krigobj.KrigInfo["lb"], krigobj.KrigInfo["ub"],
-                        np.random.rand(moboInfo["nrestart"], krigobj.KrigInfo["nvar"]))
-        xnextcand = np.zeros(shape=[moboInfo["nrestart"], krigobj.KrigInfo["nvar"]])
-        fnextcand = np.zeros(shape=[moboInfo["nrestart"]])
+                        np.random.rand(soboInfo["nrestart"], krigobj.KrigInfo["nvar"]))
+        xnextcand = np.zeros(shape=[soboInfo["nrestart"], krigobj.KrigInfo["nvar"]])
+        fnextcand = np.zeros(shape=[soboInfo["nrestart"]])
         sigmacmaes = 1  # np.mean((KrigNewMultiInfo["ub"] - KrigNewMultiInfo["lb"]) / 6)
-        for im in range(0, moboInfo["nrestart"]):
+        for im in range(0, soboInfo["nrestart"]):
             if krigconstlist is None and cheapconstlist is None:  # For unconstrained problem
                 xnextcand[im, :], es = cma.fmin2(krigobj.predict, Xrand[im, :], sigmacmaes,
                                                  {'verb_disp': 0,'verbose': -9},
@@ -56,11 +56,11 @@ def run_single_opt(krigobj, moboInfo, krigconstlist=None, cheapconstlist=None):
 
     elif acquifuncopt.lower() == 'lbfgsb':
         Xrand = realval(krigobj.KrigInfo["lb"], krigobj.KrigInfo["ub"],
-                        np.random.rand(moboInfo["nrestart"], krigobj.KrigInfo["nvar"]))
-        xnextcand = np.zeros(shape=[moboInfo["nrestart"], krigobj.KrigInfo["nvar"]])
-        fnextcand = np.zeros(shape=[moboInfo["nrestart"]])
+                        np.random.rand(soboInfo["nrestart"], krigobj.KrigInfo["nvar"]))
+        xnextcand = np.zeros(shape=[soboInfo["nrestart"], krigobj.KrigInfo["nvar"]])
+        fnextcand = np.zeros(shape=[soboInfo["nrestart"]])
         lbfgsbbound = np.hstack((krigobj.KrigInfo["lb"].reshape(-1, 1), krigobj.KrigInfo["ub"].reshape(-1, 1)))
-        for im in range(0,moboInfo["nrestart"]):
+        for im in range(0,soboInfo["nrestart"]):
             if krigconstlist is None and cheapconstlist is None:  # For unconstrained problem
                 res = minimize(krigobj.predict,Xrand[im,:] ,method='L-BFGS-B', bounds=lbfgsbbound, args=(acquifunc))
                 xnextcand[im,:] = res.x
@@ -76,14 +76,14 @@ def run_single_opt(krigobj, moboInfo, krigconstlist=None, cheapconstlist=None):
 
     elif acquifuncopt.lower() == 'cobyla':
         Xrand = realval(krigobj.KrigInfo["lb"], krigobj.KrigInfo["ub"],
-                        np.random.rand(moboInfo["nrestart"], krigobj.KrigInfo["nvar"]))
-        xnextcand = np.zeros(shape=[moboInfo["nrestart"], krigobj.KrigInfo["nvar"]])
-        fnextcand = np.zeros(shape=[moboInfo["nrestart"]])
+                        np.random.rand(soboInfo["nrestart"], krigobj.KrigInfo["nvar"]))
+        xnextcand = np.zeros(shape=[soboInfo["nrestart"], krigobj.KrigInfo["nvar"]])
+        fnextcand = np.zeros(shape=[soboInfo["nrestart"]])
         optimbound = []
         for i in range(len(krigobj.KrigInfo["ubhyp"])):
             optimbound.append(lambda x, Kriginfo, aa, bb, itemp=i: x[itemp] - krigobj.KrigInfo["lbhyp"][itemp])
             optimbound.append(lambda x, Kriginfo, aa, bb, itemp=i: krigobj.KrigInfo["ubhyp"][itemp] - x[itemp])
-        for im in range(0, moboInfo["nrestart"]):
+        for im in range(0, soboInfo["nrestart"]):
             if krigconstlist is None and cheapconstlist is None:  # For unconstrained problem
                 res = fmin_cobyla(krigobj.predict, Xrand[im,:], optimbound,
                                   rhobeg=0.5, rhoend=1e-4, args=(acquifunc))
