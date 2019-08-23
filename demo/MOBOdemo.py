@@ -55,7 +55,7 @@ def runopt(krigobj1, krigobj2):
     moboInfo = dict()
     moboInfo["nup"] = 3
     moboInfo["nrestart"] = 10
-    moboInfo["acquifunc"] = "parego"
+    moboInfo["acquifunc"] = "ehvi"
     moboInfo["acquifuncopt"] = "lbfgsb"
 
     Optim = MOBO(moboInfo,[krigobj1,krigobj2],autoupdate=True,multiupdate=5)
