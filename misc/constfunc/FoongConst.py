@@ -5,7 +5,7 @@ def foongconst(xnext):
     thetaround = np.floor(xnext[1]*2)/2
     result = np.where(consttable[:,0] == thetaround)
     index = result[0][0]
-    betamax = consttable[index,1]
+    betamax = consttable[index,2]
     if xnext[1] == 11.41:
         if xnext[2] <= 60.9564:
             coeff = 1
