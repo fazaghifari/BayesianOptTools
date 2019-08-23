@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, "..")
 import numpy as np
 from copy import deepcopy
 from surrogate_models.kriging_model import Kriging

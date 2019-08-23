@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, "..")
 import numpy as np
 import matplotlib.pyplot as plt
 from surrogate_models.kriging_model import Kriging
@@ -99,6 +101,5 @@ def predictkrig(krigobj):
     plt.show()
 
 if __name__ == '__main__':
-
     krigingobj1 = generate_kriging()
     predictkrig(krigingobj1)

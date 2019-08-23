@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, "..")
 import numpy as np
 from surrogate_models.kriging_model import Kriging
 from surrogate_models.supports.initinfo import initkriginfo
@@ -62,7 +64,7 @@ class Problem:
         return stat
 
 if __name__ == '__main__':
-    df = pd.read_csv('../innout/foongtestcase.csv', sep=',', index_col='Model')
+    df = pd.read_csv('../innout/foongtestcase_ini.csv', sep=',', index_col='Model')
     data = df.values
     X = data[:, 0:3].astype(float)
     y = data[:, 3:].astype(float)
@@ -73,10 +75,10 @@ if __name__ == '__main__':
 
     totalupdate = np.hstack((xupdate,yupdate,metricall))
     np.savetxt("../innout/Foongnextdata.csv", totalupdate, delimiter=",",
-               header="n, theta, beta, CL, OP, metric")
+               header="n, theta, beta, CD, OP, metric")
 
     plt.scatter(y[:, 0], y[:, 1])
     plt.scatter(yupdate[:, 0], yupdate[:, 1])
     plt.ylabel('OP')
-    plt.xlabel('-CL')
+    plt.xlabel('CD')
     plt.show()

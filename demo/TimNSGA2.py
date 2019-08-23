@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, "..")
 from platypus import NSGAII, Problem, Real, nondominated
 import numpy as np
 from copy import deepcopy

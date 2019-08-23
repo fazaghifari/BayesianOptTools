@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, "..")
 import numpy as np
 from reliability_analysis.akmcs import AKMCS,mcpopgen
 from testcase.RA.testcase import evaluate
