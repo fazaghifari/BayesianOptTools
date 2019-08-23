@@ -73,6 +73,7 @@ class Problem:
         return xupdate, yupdate, metricall
 
     def geomconst(self,vars):
+        # constraint 'geomconst' should have input of the design variables
         vars = np.array(vars)
         tip_angle = sweepdiffcheck.sweep_diff(vars[2], vars[4], 0.00165529)
         stat = sweepdiffcheck.min_angle_violated(tip_angle, 7)

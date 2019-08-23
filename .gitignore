@@ -11,7 +11,7 @@ Rheadata
 *$py.class
 .idea/
 *.iml
-*.csv
+innout/
 
 # C extensions
 *.so

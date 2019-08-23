@@ -1,7 +1,7 @@
 import numpy as np
-def tabulatedconst(ConstInfo,xnext):
-    # THIS FUNCTION IS NOT GENERAL, FOR NOW IT'S ONLY FOR POTSAWAT'S CASE
-    consttable = ConstInfo["constraint"]
+def foongconst(xnext):
+    # THIS FUNCTION IS NOT GENERAL, FOR NOW IT'S ONLY FOR FOONG'S CASE
+    consttable = np.loadtxt('../misc/constfunc/FoongConstraint.csv', delimiter=',')
     thetaround = np.floor(xnext[1]*2)/2
     result = np.where(consttable[:,0] == thetaround)
     index = result[0][0]
