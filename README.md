@@ -1,5 +1,5 @@
-# BayesianOptTools
-The Bayesian Optimization Tools is a Python program developed by Aerodynamics Research Group from Institut Teknologi Bandung (ITB) that contains collections of Bayesian Optimization tools including various surrogate modeling methods, sampling techniques, and optimization methods.
+# KADAL
+Kriging for Analysis Design and Exploration (KADAL) is a Python program developed by Aerodynamics Research Group from Institut Teknologi Bandung (ITB) that contains collections of Bayesian Optimization tools including various surrogate modeling methods, sampling techniques, and optimization methods.
 Currently, the program is under development and not implemented yet as a module for Python 3. Also, the coverage of the program are still limited to:
 
 * Kriging
