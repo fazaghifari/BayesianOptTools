@@ -1,10 +1,7 @@
 import numpy as np
 from copy import deepcopy
 from testcase.analyticalfcn.cases import evaluate
-from surrogate_models.kriging_model import Kriging
 from optim_tools.acquifunc_opt import run_single_opt
-from surrogate_models.supports.trendfunction import compute_regression_mat
-from surrogate_models.supports.likelihood_func import likelihood
 
 class SOBO:
     """
@@ -66,7 +63,7 @@ class SOBO:
                 pass
 
             # Find next suggested point
-            self.xnext, self.metricnext = run_single_opt(self.krigobj,self.soboInfo)
+            self.xnext, self.metricnext = run_single_opt(self.krigobj,self.soboInfo,self.krigconstlist,self.cheapconstlist)
 
             # Break Loop if autoupdate is False
             if self.autoupdate is False:
@@ -92,8 +89,8 @@ class SOBO:
             self.krigobj.train(disp=False)
 
             if self.nup == 0:
-                self.xupdate = self.xnext[:]
-                self.yupdate = self.ynext[:]
+                self.xupdate = deepcopy(self.xnext)
+                self.yupdate = deepcopy(self.ynext)
             else:
                 self.xupdate = np.vstack((self.xupdate,self.xnext))
                 self.yupdate = np.vstack((self.yupdate,self.ynext))
