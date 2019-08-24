@@ -1,5 +1,5 @@
 # KADAL
-Kriging for Analysis, Design, and Exploration (KADAL) is a Python program developed by [Flow Diagnostics Research Group](https://flowdiagnostics.ftmd.itb.ac.id "Our Lab's Homepage") from Institut Teknologi Bandung (ITB) that contains collections of Bayesian Optimization tools including various surrogate modeling methods, sampling techniques, and optimization methods.
+Kriging for Analysis, Design optimization, And expLoration (KADAL) is a Python program developed by [Flow Diagnostics Research Group](https://flowdiagnostics.ftmd.itb.ac.id "Our Lab's Homepage") from Institut Teknologi Bandung (ITB) that contains collections of Bayesian Optimization tools including various surrogate modeling methods, sampling techniques, and optimization methods.
 Currently, the program is under development and not implemented yet as a module for Python 3. Also, the coverage of the program are still limited to:
 
 * Kriging
@@ -18,9 +18,12 @@ Currently, the program is under development and not implemented yet as a module 
   * Schaffer (Multi-Objective)
   
 # Required packages
-BayesianOptTools depends on these modules: numpy, scipy, sk-learn and pycma.
+KADAL depends on these modules: numpy, scipy, sk-learn, pycma, and platypus.
 
-pycma module can be obtained here: https://github.com/CMA-ES/pycma
+pycma: https://github.com/CMA-ES/pycma
+platypus : https://github.com/Project-Platypus/Platypus
+
+KADAL has been tested on Python 3.6.1
 
 # Quick Examples
 The demo codes are available in the main folder. 
