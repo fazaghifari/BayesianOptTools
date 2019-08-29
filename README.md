@@ -5,7 +5,7 @@ Currently, the program is under development and not implemented yet as a module 
 * Kriging
   * Ordinary Kriging
   * Regression Kriging
-  * Polynomial Chaos Kriging
+  * Polynomial Kriging
   * Composite Kernel Kriging
   * Kriging with Partial Least Square
 * Bayesian Optimization
@@ -28,8 +28,8 @@ KADAL has been tested on Python 3.6.1
 # Quick Examples
 The demo codes are available in the main folder. 
 * KrigDemo.py is a demo script for creating surrogate model for Branin test function.
-* uncMOBOdemo.py is a demo script for performing unconstrained multi-objective optimization for Schaffer test function.
-* uncSOBOdemo.py is a demo script for performing unconstrained single objective optimization for Branin test function.
+* MOBOdemo.py is a demo script for performing unconstrained multi-objective optimization for Schaffer test function.
+* SOBOdemo.py is a demo script for performing unconstrained single objective optimization for Branin test function.
 
 # Contact
 The original program was written by Pramudita Satria Palar, Kemas Zakaria, Ghifari Adam Faza, and maintained by Aerodynamics Research Group ITB. 
