@@ -18,10 +18,9 @@ Currently, the program is under development and not implemented yet as a module 
   * Schaffer (Multi-Objective)
   
 # Required packages
-KADAL depends on these modules: numpy, scipy, sk-learn, pycma, and platypus.
+KADAL depends on these modules: numpy, scipy, sk-learn, and pycma.
 
 - pycma: https://github.com/CMA-ES/pycma
-- platypus : https://github.com/Project-Platypus/Platypus
 
 KADAL has been tested on Python 3.6.1
 
