@@ -174,7 +174,7 @@ class AKMCS:
 
 def mcpopgen(lb=None,ub=None,n_order=6,n_coeff=1,type="random",ndim=2,stddev=1,mean=0):
     nmc = int(n_coeff*10**n_order)
-    if type.lower()== "gaussian":
+    if type.lower() == "normal" or type.lower() == "gaussian":
         pop = stddev*np.random.randn(nmc,ndim)+mean
     elif type.lower() == "lognormal":
         var = stddev**2

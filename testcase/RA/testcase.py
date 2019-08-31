@@ -16,6 +16,8 @@ def evaluate (X,type = "fourbranches"):
             y[ii, 0] = branin(X[ii, :])
     elif type.lower() == "hidimenra":
         y = hidimenRA(X)
+    elif type.lower() == "hidimenra2":
+        y = hidimenRA2(X)
     else:
         raise NameError("Test case unavailable!")
 
@@ -63,3 +65,11 @@ def hidimenRA(x):
     f = tempvar - np.sum(x,axis=1).reshape(-1,1)
     return f
 
+def hidimenRA2(x):
+
+    n = np.size(x, axis=1)
+    tempvar = 3 - x[:,-1]
+    xtemp = x[:,:n-1]
+
+    f = tempvar.reshape(-1,1) + 0.01 * np.sum(xtemp**2,axis=1).reshape(-1,1)
+    return f

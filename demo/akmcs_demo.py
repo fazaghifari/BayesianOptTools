@@ -12,7 +12,7 @@ import time
 def generate_krig(init_samp,n_krigsamp,nvar,problem):
 
     # Monte Carlo Sampling
-    init_krigsamp = np.loadtxt('../innout/akmcskrigsamp.csv',delimiter=',')
+    init_krigsamp = mcpopgen(type="normal",ndim=nvar,n_order=1,n_coeff=5)
     ykrig = evaluate(init_krigsamp, type=problem)
 
     init_samp_G = evaluate(init_samp, type=problem)
@@ -36,12 +36,12 @@ def generate_krig(init_samp,n_krigsamp,nvar,problem):
     KrigInfo["ub"] = ub
     KrigInfo["lb"] = lb
     KrigInfo["nkernel"] = len(KrigInfo["kernel"])
-    # KrigInfo["n_princomp"] = 4
+    KrigInfo["n_princomp"] = 3
     KrigInfo["optimizer"] = "lbfgsb"
 
     #trainkrig
     t = time.time()
-    krigobj = Kriging(KrigInfo, standardization=True, standtype='default', normy=False, trainvar=False)
+    krigobj = KPLS(KrigInfo, standardization=True, standtype='default', normy=False, trainvar=False)
     krigobj.train(parallel=False)
     loocverr, _ = krigobj.loocvcalc()
     elapsed = time.time() - t
@@ -50,7 +50,7 @@ def generate_krig(init_samp,n_krigsamp,nvar,problem):
 
     return krigobj,Pfreal
 
-def run_akmcs(krigobj,init_samp,problem):
+def run_akmcs(krigobj,init_samp,problem,filename):
 
     # Define AKMCS Information
     akmcsInfo = dict()
@@ -61,16 +61,21 @@ def run_akmcs(krigobj,init_samp,problem):
     # Run AKMCS
     t = time.time()
     akmcsobj = AKMCS(krigobj,akmcsInfo)
-    akmcsobj.run(savedatato='krig.csv')
+    akmcsobj.run(savedatato=filename)
     elapsed = time.time() - t
     print("elapsed time is : ", elapsed, "s")
 
 if __name__ == '__main__':
-    nvar = 40
-    n_krigsamp = 50
-    problem = 'hidimenra'
-    init_samp = np.loadtxt('../innout/akmcssamp.csv',delimiter=',')
+    init_samp = np.loadtxt('../innout/akmcssampnorm.csv', delimiter=',')
+    for i in range(5):
+        print("--"*25)
+        print("loop no.",i+1)
+        print("--" * 25)
+        nvar = 50
+        n_krigsamp = 50
+        problem = 'hidimenra2'
+        filename = "kpls1_"+str(i+1)+".csv"
 
-    krigobj,Pfreal = generate_krig(init_samp,n_krigsamp,nvar,problem)
-    run_akmcs(krigobj,init_samp,problem)
-    print(Pfreal)
+        krigobj,Pfreal = generate_krig(init_samp,n_krigsamp,nvar,problem)
+        run_akmcs(krigobj,init_samp,problem,filename)
+        print(Pfreal)

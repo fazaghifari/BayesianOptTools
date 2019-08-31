@@ -49,7 +49,7 @@ def generate_kriging():
     t = time.time()
     krigobj = Kriging(KrigInfo,standardization=True,standtype='default',normy=False,trainvar=True)
     krigobj.train(parallel=False)
-    loocverr,_ = krigobj.loocvcalc()
+    loocverr, _ = krigobj.loocvcalc()
     elapsed = time.time() - t
     print("elapsed time for train Kriging model: ", elapsed, "s")
     print("LOOCV error of Kriging model: ", loocverr, "%")
