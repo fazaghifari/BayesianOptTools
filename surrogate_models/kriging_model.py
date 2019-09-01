@@ -182,8 +182,12 @@ class Kriging:
         if self.KrigInfo['nrestart'] < 1:
             xhyp = self.nbhyp * [0]
         else:
-            _, xhyp = sampling('sobol', self.nbhyp, self.KrigInfo['nrestart'],
-                               result="real", upbound=self.KrigInfo["ubhyp"], lobound=self.KrigInfo["lbhyp"])
+            if self.nbhyp <= 40:
+                _, xhyp = sampling('sobol', self.nbhyp, self.KrigInfo['nrestart'],
+                                   result="real", upbound=self.KrigInfo["ubhyp"], lobound=self.KrigInfo["lbhyp"])
+            else:
+                _, xhyp = sampling('rlh', self.nbhyp, self.KrigInfo['nrestart'],
+                                   result="real", upbound=self.KrigInfo["ubhyp"], lobound=self.KrigInfo["lbhyp"])
 
         # Optimize hyperparam if number of hyperparameter is 1 using golden section method
         if self.nbhyp == 1:

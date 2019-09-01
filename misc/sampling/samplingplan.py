@@ -151,3 +151,7 @@ def scale(inst,strategy=0,**kwargs):
         scale_inst = scale_inst*np.diag(1/inst_s)
 
     return (scale_inst, range)
+
+if __name__ == '__main__':
+    samplenorm,_ = sampling('sobol',3,10)
+    print(samplenorm)

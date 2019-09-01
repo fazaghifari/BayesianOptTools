@@ -36,7 +36,7 @@ def generate_kriging():
     KrigInfo["nvar"] = nvar
     KrigInfo["problem"] = "branin"
     KrigInfo["nsamp"] = nsample
-    KrigInfo["nrestart"] = 5
+    KrigInfo["nrestart"] = 7
     KrigInfo["ub"] = ub
     KrigInfo["lb"] = lb
     KrigInfo["kernel"] = kernel
@@ -47,7 +47,7 @@ def generate_kriging():
 
     # Run Kriging
     t = time.time()
-    krigobj = Kriging(KrigInfo,standardization=True,standtype='default',normy=False,trainvar=True)
+    krigobj = Kriging(KrigInfo,standardization=True,standtype='default',normy=False,trainvar=False)
     krigobj.train(parallel=False)
     loocverr, _ = krigobj.loocvcalc()
     elapsed = time.time() - t

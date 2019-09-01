@@ -36,7 +36,7 @@ def generate_krig(init_samp,n_krigsamp,nvar,problem):
     KrigInfo["ub"] = ub
     KrigInfo["lb"] = lb
     KrigInfo["nkernel"] = len(KrigInfo["kernel"])
-    KrigInfo["n_princomp"] = 3
+    KrigInfo["n_princomp"] = 4
     KrigInfo["optimizer"] = "lbfgsb"
 
     #trainkrig
@@ -74,7 +74,7 @@ if __name__ == '__main__':
         nvar = 50
         n_krigsamp = 50
         problem = 'hidimenra2'
-        filename = "kpls1_"+str(i+1)+".csv"
+        filename = "kpls4_"+str(i+1)+".csv"
 
         krigobj,Pfreal = generate_krig(init_samp,n_krigsamp,nvar,problem)
         run_akmcs(krigobj,init_samp,problem,filename)
