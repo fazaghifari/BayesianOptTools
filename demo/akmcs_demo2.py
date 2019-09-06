@@ -9,25 +9,19 @@ from surrogate_models.supports.initinfo import initkriginfo
 import time
 
 
-def generate_krig(init_samp,n_krigsamp,nvar,problem):
+def generate_krig(init_samp,n_krigsamp,nvar,problem,runmc=False):
 
     # Monte Carlo Sampling
-    t1 = time.time()
-    init_krigsamp = mcpopgen(type="lognormal",ndim=nvar,n_order=1,n_coeff=7, stddev=0.2, mean=1)
+    init_krigsamp = krigsamp()
     ykrig = evaluate(init_krigsamp, type=problem)
-    t2 = time.time()
-    print("50 samp eval", t2 - t1)
+    print(np.count_nonzero(ykrig <= 0))
 
-    init_samp_G = evaluate(init_samp, type=problem)
-    total_samp = np.hstack((init_samp, init_samp_G)).transpose()
-    positive_samp = total_samp[:, total_samp[nvar] >= 0]
-    positive_samp = positive_samp.transpose()
-    nsamp = np.size(init_samp, 0)
-    npos = np.size(positive_samp, 0)
-    Pfreal = 1 - npos / nsamp
+    Pfreal = None
+    if runmc is True:
+        Pfreal = evalmc(init_samp,problem)
 
-    lb = np.floor(np.min(init_samp)) * np.ones(shape=[nvar])
-    ub = np.ceil(np.max(init_samp)) * np.ones(shape=[nvar])
+    lb = (np.min(init_samp, axis=0))
+    ub = (np.max(init_samp, axis=0))
 
     # Set Kriging Info
     KrigInfo = initkriginfo("single")
@@ -54,6 +48,28 @@ def generate_krig(init_samp,n_krigsamp,nvar,problem):
     return krigobj,Pfreal
 
 
+def krigsamp():
+    E12 = mcpopgen(type="lognormal", ndim=2, n_order=1, n_coeff=1.2, stddev=2.1e10, mean=2.1e11)
+    A1 = mcpopgen(type="lognormal", ndim=1, n_order=1, n_coeff=1.2, stddev=2e-4, mean=2e-3)
+    A2 = mcpopgen(type="lognormal", ndim=1, n_order=1, n_coeff=1.2, stddev=1e-4, mean=1e-3)
+    P = mcpopgen(type="gumbel", ndim=6, n_order=1, n_coeff=1.2, stddev=7.5e3, mean=5e4)
+    all = np.hstack((E12, A1, A2, P))
+    return all
+
+
+def evalmc(init_samp, problem):
+    init_samp_G = evaluate(init_samp, type=problem)
+    total_samp = np.hstack((init_samp, init_samp_G)).transpose()
+    positive_samp = total_samp[:, total_samp[nvar] >= 0]
+    positive_samp = positive_samp.transpose()
+    nsamp = np.size(init_samp, 0)
+    npos = np.size(positive_samp, 0)
+    Pfreal = 1 - npos / nsamp
+    np.savetxt('../innout/bridge3_gx.csv',init_samp_G,delimiter=',')
+
+    return Pfreal
+
+
 def run_akmcs(krigobj,init_samp,problem,filename):
 
     # Define AKMCS Information
@@ -70,16 +86,20 @@ def run_akmcs(krigobj,init_samp,problem,filename):
     print("elapsed time is : ", elapsed, "s")
 
 if __name__ == '__main__':
-    init_samp = np.loadtxt('../innout/lognormal100.csv', delimiter=',')
-    for i in range(3):
+    init_samp = np.loadtxt('../innout/bridge3.csv', delimiter=',')
+    for i in range(1):
         print("--"*25)
         print("loop no.",i+1)
         print("--" * 25)
-        nvar = 100
-        n_krigsamp = 70
-        problem = 'hidimenra'
-        filename = "kpls3_"+str(i+1)+".csv"
+        nvar = 10
+        n_krigsamp = 30
+        problem = 'bridge'
+        filename = "bridge2_krig"+str(i+1)+".csv"
 
-        krigobj,Pfreal = generate_krig(init_samp,n_krigsamp,nvar,problem)
-        run_akmcs(krigobj,init_samp,problem,filename)
+        # krigobj,Pfreal = generate_krig(init_samp,n_krigsamp,nvar,problem)
+        # run_akmcs(krigobj,init_samp,problem,filename)
+        t1 = time.time()
+        Pfreal = evalmc(init_samp,problem)
+        t2 = time.time()
+        print('Runtime:',t2-t1)
         print(Pfreal)

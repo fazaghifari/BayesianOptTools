@@ -9,6 +9,7 @@ import numpy.matlib
 from misc.sampling.haltonsampling import halton
 from misc.sampling.rlh import rlh
 from misc.sampling.sobol_seq import i4_sobol_generate
+from misc.sampling.sobol_new import sobol_points
 
 def sampling(option,nvar,nsamp,**kwargs):
     ret = kwargs.get('result', "normalized")
@@ -19,6 +20,9 @@ def sampling(option,nvar,nsamp,**kwargs):
         samplenorm = halton(nvar,nsamp)
     elif option.lower() == "sobol":
         samplenorm = i4_sobol_generate(nvar,nsamp)
+    elif option.lower() == "sobolnew":
+        samplenorm = sobol_points(nsamp+1, nvar)
+        samplenorm = samplenorm[1:,:]
     elif option.lower() == "rlh":
         samplenorm = rlh(nvar, nsamp)
     else:

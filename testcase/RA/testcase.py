@@ -1,4 +1,5 @@
 import numpy as np
+from testcase.RA.bridgetruss_case import trussbridge
 
 def evaluate (X,type = "fourbranches"):
     if X.ndim == 1:
@@ -18,6 +19,20 @@ def evaluate (X,type = "fourbranches"):
         y = hidimenRA(X)
     elif type.lower() == "hidimenra2":
         y = hidimenRA2(X)
+    elif type.lower() == "bridge":
+        for ii in range(nsample):
+            if ii % 50000 == 0 and ii != 0:
+                print("eval number",ii)
+            num_tri = 6
+            Ediag = np.ones(shape=num_tri) * X[ii,1]
+            Adiag = np.ones(shape=num_tri) * X[ii,3]
+            Ebot = np.ones(shape=num_tri) * X[ii,0]
+            Abot = np.ones(shape=num_tri) * X[ii,2]
+            Etop = np.ones(shape=num_tri - 1) * X[ii,0]
+            Atop = np.ones(shape=num_tri - 1) * X[ii,2]
+            p = -X[ii,4:10]
+            res = trussbridge(Ediag,Adiag,Ebot,Abot,Etop,Atop,p)
+            y[ii, 0] = (res['uy'] + 0.1)
     else:
         raise NameError("Test case unavailable!")
 

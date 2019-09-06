@@ -56,6 +56,7 @@ class AKMCS:
         """
         # Calculate Gx and SigmaG
         # Split init_samp to avoid memory error
+        t1 = time.time()
         if self.nsamp < 10000:
             self.Gx,self.sigmaG = self.krigobj.predict(self.init_samp, ['pred','s'])
         else:
@@ -69,6 +70,7 @@ class AKMCS:
                 else:
                     self.Gx[start:, :], self.sigmaG[:,start:] = \
                         self.krigobj.predict(self.init_samp[start:, :], ['pred','s'])
+        t2 = time.time()
 
         # Calculate probability of failure
         self.Pf = self.pfcalc()
@@ -91,8 +93,10 @@ class AKMCS:
                 self.krigobj.KrigInfo['nsamp'] += 1
 
                 # standardize model and train updated kriging model
+                t3 = time.time()
                 self.krigobj.standardize()
                 self.krigobj.train(disp=False)
+                t4 = time.time()
 
                 # Calculate Gx and SigmaG
                 # Split init_samp to avoid memory error
@@ -110,18 +114,20 @@ class AKMCS:
                             self.Gx[start:, :], self.sigmaG[:, start:] = \
                                 self.krigobj.predict(self.init_samp[start:, :], ['pred', 's'])
 
+                t5 = time.time()
                 # Calculate Pf, COV and LFU
                 self.Pf = self.pfcalc()
                 self.cov = self.covpf()
                 self.lfucalc()
+                t6 = time.time()
 
                 # Update variables
                 self.updateX = np.vstack((self.updateX,self.xnew))
                 self.minUiter = np.vstack((self.minUiter,self.minU))
-                if disp:
-                    print(f"Done iter no: {i+1}, Pf: {self.Pf}, minU: {self.minU}")
-
                 elapsed = time.time() - t
+                if disp:
+                    print(f"iter no: {i+1}, Pf: {self.Pf}, minU: {self.minU}, time(s): {elapsed}, ynew: {ynew}" )
+
                 if savedatato is not None:
                     temparray = np.array([i,self.Pf,self.minU,elapsed])
                     if i == 0:
@@ -181,6 +187,9 @@ def mcpopgen(lb=None,ub=None,n_order=6,n_coeff=1,type="random",ndim=2,stddev=1,m
         sigma = np.sqrt(np.log(var/(mean**2)+1))
         mu = np.log((mean**2)/np.sqrt(var + mean**2))
         pop = np.exp(sigma*np.random.randn(nmc,ndim)+mu)
+    elif type.lower() == 'gumbel':
+        beta = (stddev/np.pi) * np.sqrt(6)
+        pop = np.random.gumbel(mean,beta,(nmc,ndim))
     elif type.lower()== "random":
         if lb.any() == None or ub.any() == None:
             raise ValueError("type 'random' is selected, please input lower bound and upper bound value")

@@ -19,7 +19,7 @@ def sobol_points(n, d):
     n = int(n)
     d = int(d)
 
-    soboldir = pd.read_csv('sobolcoeff.csv')
+    soboldir = pd.read_csv('../misc/sampling/sobolcoeff.csv')
 
     # ll = number of bits needed
     ll = int(np.ceil(np.log(n)/np.log(2.0)))

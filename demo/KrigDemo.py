@@ -17,16 +17,16 @@ def generate_kriging():
     KrigInfo = dict()
     kernel = ["gaussian"]
     # Sampling
-    nsample = 25
+    nsample = 40
     nvar = 2
-    ub = np.array([10, 15])
-    lb = np.array([-5, 0])
+    ub = np.array([5, 5])
+    lb = np.array([-5, -5])
     nup = 3
     sampoption = "halton"
     samplenorm, sample = sampling(sampoption, nvar, nsample, result="real", upbound=ub, lobound=lb)
     X = sample
     # Evaluate sample
-    y1 = evaluate(X, "branin")
+    y1 = evaluate(X, "styblinski")
 
     # Initialize KrigInfo
     KrigInfo = initkriginfo("single")
@@ -34,7 +34,7 @@ def generate_kriging():
     KrigInfo["X"] = X
     KrigInfo["y"] = y1
     KrigInfo["nvar"] = nvar
-    KrigInfo["problem"] = "branin"
+    KrigInfo["problem"] = "styblinski"
     KrigInfo["nsamp"] = nsample
     KrigInfo["nrestart"] = 7
     KrigInfo["ub"] = ub
@@ -43,7 +43,9 @@ def generate_kriging():
     KrigInfo["TrendOrder"] = 0
     KrigInfo["nugget"] = -6
     KrigInfo["n_princomp"] = 1
-    KrigInfo["optimizer"] = "slsqp"
+    KrigInfo["kernel"] = ["matern32","matern52"]
+    KrigInfo["nkernel"] = len(KrigInfo["kernel"])
+    KrigInfo["optimizer"] = "lbfgsb"
 
     # Run Kriging
     t = time.time()
@@ -60,16 +62,16 @@ def generate_kriging():
 def predictkrig(krigobj):
     nsample = 25
     nvar = 2
-    ub = np.array([10, 15])
-    lb = np.array([-5, 0])
+    ub = np.array([5, 5])
+    lb = np.array([-5, -5])
     nup = 3
     sampoption = "halton"
 
     # Test Kriging Output
     neval = 10000
     samplenormout, sampleeval = sampling(sampoption, nvar, neval, result="real", upbound=ub, lobound=lb)
-    xx = np.linspace(-5, 10, 100)
-    yy = np.linspace(0, 15, 100)
+    xx = np.linspace(-5, 5, 100)
+    yy = np.linspace(-5, 5, 100)
     Xevalx, Xevaly = np.meshgrid(xx, yy)
     Xeval = np.zeros(shape=[neval, 2])
     Xeval[:, 0] = np.reshape(Xevalx, (neval))
@@ -79,7 +81,7 @@ def predictkrig(krigobj):
     yeval = np.zeros(shape=[neval, 1])
     yact = np.zeros(shape=[neval, 1])
     yeval = krigobj.predict(Xeval,'pred')
-    yact = evaluate(Xeval, "branin")
+    yact = evaluate(Xeval, "styblinski")
     hasil = np.hstack((yeval, yact))
 
     # Evaluate RMSE

@@ -179,14 +179,19 @@ class Kriging:
             print("Begin train hyperparam.")
 
         # Create multiple starting points
+        if len(self.KrigInfo["ubhyp"]) != self.nbhyp:
+            self.nbhyp = len(self.KrigInfo["ubhyp"])
+        else:
+            pass
+
         if self.KrigInfo['nrestart'] < 1:
             xhyp = self.nbhyp * [0]
         else:
             if self.nbhyp <= 40:
-                _, xhyp = sampling('sobol', self.nbhyp, self.KrigInfo['nrestart'],
+                _, xhyp = sampling('sobol', len(self.KrigInfo["ubhyp"]), self.KrigInfo['nrestart'],
                                    result="real", upbound=self.KrigInfo["ubhyp"], lobound=self.KrigInfo["lbhyp"])
             else:
-                _, xhyp = sampling('rlh', self.nbhyp, self.KrigInfo['nrestart'],
+                _, xhyp = sampling('sobolnew', len(self.KrigInfo["ubhyp"]), self.KrigInfo['nrestart'],
                                    result="real", upbound=self.KrigInfo["ubhyp"], lobound=self.KrigInfo["lbhyp"])
 
         # Optimize hyperparam if number of hyperparameter is 1 using golden section method

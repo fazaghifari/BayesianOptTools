@@ -1,6 +1,18 @@
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 def errperf (T,P,type='rmse'):
+    """
+    Calculate error performance metric of the predicted value
+
+    Args:
+        T (nparray): True value
+        P (nparray): Predicted value
+
+    Return:
+        V : Error metric
+    """
 
     #Check the dimension between T and P
     if np.shape(T) != np.shape(P):
@@ -43,7 +55,11 @@ def errperf (T,P,type='rmse'):
     elif type == 're': #Relative error
         num_zero = np.count_nonzero(T == 0)
         if num_zero > 0:
-            raise Exception("All elements of T must be nonzero.")
+            idx1, idx2 = np.where(T == 0)
+            Ve = errperf(T, P, 'e')
+            V = Ve / T
+            for i, item in enumerate(idx1):
+                V[item,idx2[i]] = T[i]-P[i]
         else:
             Ve = errperf(T,P,'e')
             V = Ve/T
