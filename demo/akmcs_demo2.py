@@ -96,10 +96,6 @@ if __name__ == '__main__':
         problem = 'bridge'
         filename = "bridge2_krig"+str(i+1)+".csv"
 
-        # krigobj,Pfreal = generate_krig(init_samp,n_krigsamp,nvar,problem)
-        # run_akmcs(krigobj,init_samp,problem,filename)
-        t1 = time.time()
-        Pfreal = evalmc(init_samp,problem)
-        t2 = time.time()
-        print('Runtime:',t2-t1)
+        krigobj,Pfreal = generate_krig(init_samp,n_krigsamp,nvar,problem)
+        run_akmcs(krigobj,init_samp,problem,filename)
         print(Pfreal)

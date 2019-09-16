@@ -43,7 +43,7 @@ def generate_kriging():
     KrigInfo["TrendOrder"] = 0
     KrigInfo["nugget"] = -6
     KrigInfo["n_princomp"] = 1
-    KrigInfo["kernel"] = ["matern32","matern52"]
+    KrigInfo["kernel"] = ["gaussian"]
     KrigInfo["nkernel"] = len(KrigInfo["kernel"])
     KrigInfo["optimizer"] = "lbfgsb"
 

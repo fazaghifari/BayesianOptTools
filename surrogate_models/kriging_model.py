@@ -199,6 +199,10 @@ class Kriging:
             res = minimize_scalar(likelihood, bounds=(self.lb, self.ub), method='golden', args=(self.KrigInfo,'default',
                                                                                                 self.trainvar) )
             best_x = np.array([res.x])
+            neglnlikecand = likelihood(best_x, self.KrigInfo, trainvar=self.trainvar)
+            if disp:
+                print(f"Best hyperparameter is {best_x}")
+                print(f"With NegLnLikelihood of {neglnlikecand}")
         else:
             # Set Bounds and Constraints for Optimizer
             # Set Bounds for LBSGSB or SLSQP if one is used.

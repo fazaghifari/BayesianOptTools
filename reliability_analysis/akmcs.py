@@ -41,6 +41,7 @@ class AKMCS:
         self.nsamp = np.size(self.init_samp, axis=0)
         self.Gx = np.zeros(shape=[self.nsamp,1])
         self.sigmaG = np.zeros(shape=[1,self.nsamp])
+        self.stop_criteria = 100 #assign large number
 
     def run(self, autoupdate=True, disp=True, savedatato=None):
         """
@@ -77,6 +78,7 @@ class AKMCS:
 
         # Calculate learning function U
         self.lfucalc()
+        self.stopcrit()
         self.updateX = np.array([self.xnew])
         self.minUiter = np.array([self.minU])
         if disp:
@@ -119,6 +121,7 @@ class AKMCS:
                 self.Pf = self.pfcalc()
                 self.cov = self.covpf()
                 self.lfucalc()
+                self.stopcrit()
                 t6 = time.time()
 
                 # Update variables
@@ -126,7 +129,8 @@ class AKMCS:
                 self.minUiter = np.vstack((self.minUiter,self.minU))
                 elapsed = time.time() - t
                 if disp:
-                    print(f"iter no: {i+1}, Pf: {self.Pf}, minU: {self.minU}, time(s): {elapsed}, ynew: {ynew}" )
+                    print(f"iter no: {i+1}, Pf: {self.Pf}, stopcrit: {self.stop_criteria}, time(s): {elapsed}, "
+                          f"ynew: {ynew}")
 
                 if savedatato is not None:
                     temparray = np.array([i,self.Pf,self.minU,elapsed])
@@ -137,8 +141,14 @@ class AKMCS:
                 else:
                     pass
 
+                if savedatato is not None:
+                    filename = '../innout/' + savedatato
+                    np.savetxt(filename, totaldata, delimiter=',', header='iter,Pf,minU,time(s)')
+                else:
+                    pass
+
                 # Break condition
-                if self.minU >= 2 and i >= 15:
+                if self.stop_criteria <= 0.05 and i >= 15:
                     break
                 else:
                     pass
@@ -149,13 +159,6 @@ class AKMCS:
             else:
                 pass
             break  # temporary break for debugging, delete/comment this line later
-
-        if savedatato is not None:
-            filename = '../innout/'+savedatato
-            np.savetxt(filename,totaldata,delimiter=',',header='iter,Pf,minU,time(s)')
-        else:
-            pass
-
 
     def pfcalc(self):
         nGless = len([i for i in self.Gx if i <= 0])
@@ -176,6 +179,18 @@ class AKMCS:
         self.minU = np.min(self.U)
         minUloc = np.argmin(self.U)
         self.xnew = self.init_samp[minUloc,:]
+
+    def stopcrit(self):
+        nsamp = np.size(self.init_samp, axis=0)
+        temp1 = self.Gx - 1.96 * self.sigmaG.reshape(-1,1)
+        temp2 = self.Gx + 1.96 * self.sigmaG.reshape(-1,1)
+        pfp = len([i for i in temp1 if i <= 0])/nsamp
+        pfn = len([i for i in temp2 if i <= 0])/nsamp
+        pf0 = len([i for i in self.Gx if i <= 0])/nsamp
+        if pf0 == 0:
+            self.stop_criteria = 100
+        else:
+            self.stop_criteria = (pfp-pfn)/pf0
 
 
 def mcpopgen(lb=None,ub=None,n_order=6,n_coeff=1,type="random",ndim=2,stddev=1,mean=0):
