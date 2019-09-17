@@ -1,5 +1,6 @@
 import numpy as np
 from testcase.RA.bridgetruss_case import trussbridge
+from testcase.RA.twodimheatcond import Conduction
 
 def evaluate (X,type = "fourbranches"):
     if X.ndim == 1:
@@ -33,6 +34,11 @@ def evaluate (X,type = "fourbranches"):
             p = -X[ii,4:10]
             res = trussbridge(Ediag,Adiag,Ebot,Abot,Etop,Atop,p)
             y[ii, 0] = (res['uy'] + 0.1)
+    elif type.lower() == 'heatcond':
+        for ii in range(nsample):
+            print('run no.',ii+1)
+            plate = Conduction()
+            y[ii,0] = (6-plate.run(X[ii,:]))
     else:
         raise NameError("Test case unavailable!")
 

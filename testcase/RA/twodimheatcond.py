@@ -38,7 +38,6 @@ class Conduction:
         return tavgB
 
     def creatematrix(self, kx):
-        print("creating matrix")
         matsize = np.size(self.z,0)
         self.coeffmat = np.zeros(shape=[matsize,matsize])
 
@@ -74,7 +73,6 @@ class Conduction:
                 self.coeffmat[i, i + (self.nx + 1)] = -(k4+k2)
 
     def solve(self, view=False):
-        print("solving eqn")
         self.source = np.zeros(shape=[np.size(self.z,0)])
         for i in range(np.size(self.z,0)):
             x = self.z[i,0]
@@ -108,7 +106,6 @@ class Conduction:
 
 
     def calculatealpha(self, xi, gridx, gridy, theta=0.2, view=False):
-        print("Calculating alpha")
         grfx, grfy = self.rndfgrid()
         M, li, phii = self.grandomfield(theta,grfx,grfy)
         self.z = np.hstack((gridx.reshape(self.nn, 1), gridy.reshape(self.nn, 1)))
