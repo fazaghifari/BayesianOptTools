@@ -13,6 +13,7 @@ def generate_krig(init_samp,n_krigsamp,nvar,problem,runmc=False):
 
     # Monte Carlo Sampling
     init_krigsamp = krigsamp()
+    print("Evaluating Kriging Sample")
     ykrig = evaluate(init_krigsamp, type=problem)
     print(np.count_nonzero(ykrig <= 0))
 
@@ -33,12 +34,12 @@ def generate_krig(init_samp,n_krigsamp,nvar,problem,runmc=False):
     KrigInfo["ub"] = ub
     KrigInfo["lb"] = lb
     KrigInfo["nkernel"] = len(KrigInfo["kernel"])
-    # KrigInfo["n_princomp"] = 4
+    KrigInfo["n_princomp"] = 4
     KrigInfo["optimizer"] = "lbfgsb"
 
     #trainkrig
     t = time.time()
-    krigobj = Kriging(KrigInfo, standardization=True, standtype='default', normy=False, trainvar=False)
+    krigobj = KPLS(KrigInfo, standardization=True, standtype='default', normy=False, trainvar=False)
     krigobj.train(parallel=False)
     loocverr, _ = krigobj.loocvcalc()
     elapsed = time.time() - t
@@ -49,11 +50,7 @@ def generate_krig(init_samp,n_krigsamp,nvar,problem,runmc=False):
 
 
 def krigsamp():
-    E12 = mcpopgen(type="lognormal", ndim=2, n_order=1, n_coeff=1.2, stddev=2.1e10, mean=2.1e11)
-    A1 = mcpopgen(type="lognormal", ndim=1, n_order=1, n_coeff=1.2, stddev=2e-4, mean=2e-3)
-    A2 = mcpopgen(type="lognormal", ndim=1, n_order=1, n_coeff=1.2, stddev=1e-4, mean=1e-3)
-    P = mcpopgen(type="gumbel", ndim=6, n_order=1, n_coeff=1.2, stddev=7.5e3, mean=5e4)
-    all = np.hstack((E12, A1, A2, P))
+    all = mcpopgen(type="normal", ndim=53, n_order=1, n_coeff=5)
     return all
 
 
@@ -65,7 +62,7 @@ def evalmc(init_samp, problem):
     nsamp = np.size(init_samp, 0)
     npos = np.size(positive_samp, 0)
     Pfreal = 1 - npos / nsamp
-    np.savetxt('../innout/bridge3_gx.csv',init_samp_G,delimiter=',')
+    np.savetxt('../innout/heatMCS.csv',init_samp_G,delimiter=',')
 
     return Pfreal
 
@@ -86,15 +83,15 @@ def run_akmcs(krigobj,init_samp,problem,filename):
     print("elapsed time is : ", elapsed, "s")
 
 if __name__ == '__main__':
-    init_samp = np.loadtxt('../innout/bridge3.csv', delimiter=',')
-    for i in range(1):
-        print("--"*25)
+    init_samp = np.loadtxt('../innout/heat_samp2.csv', delimiter=',')
+    for i in range(3):
+        print("--" * 25)
         print("loop no.",i+1)
         print("--" * 25)
-        nvar = 10
-        n_krigsamp = 12
-        problem = 'bridge'
-        filename = "bridge2_krig"+str(i+1)+".csv"
+        nvar = 53
+        n_krigsamp = 50
+        problem = 'heatcond'
+        filename = "heatcondkpls4_"+str(i+1)+".csv"
 
         krigobj,Pfreal = generate_krig(init_samp,n_krigsamp,nvar,problem)
         run_akmcs(krigobj,init_samp,problem,filename)

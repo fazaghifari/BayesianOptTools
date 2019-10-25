@@ -22,6 +22,8 @@ def evaluate(X,type):
         y = schaffer1(X)
     elif type.lower() == "fonseca":
         y = fonseca(X)
+    elif type.lower() == "ishigami":
+        y = ishigami(X)
     else:
         raise NameError("Test case unavailable!")
     return y
@@ -145,3 +147,12 @@ def schaffer1 (x):
     if m == 1:
         f = f[0, :]
     return f
+
+def ishigami(x):
+    x1 = x[:, 0]
+    x2 = x[:, 1]
+    x3 = x[:, 2]
+    a = 7
+    b = 0.1
+    f = np.sin(x1) + a * (np.sin(x2))**2 + b * (np.sin(x1) * x3**4)
+    return f.reshape(-1,1)

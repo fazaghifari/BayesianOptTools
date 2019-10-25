@@ -1,16 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist
+import scipy
 import warnings
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
+import time
 warnings.filterwarnings("ignore")
 
 
 class Conduction:
     """
-    Solver for 2D heat conduction with source
-
+    Solver for 2D heat conduction with heat source on the plate and
+    Gaussian random field as the conductivity coefficient.
     """
 
     def __init__(self, x=(-0.5, 0.5), y=(-0.5, 0.5)):
@@ -29,11 +31,20 @@ class Conduction:
         self.length = self.x1 - self.x0
         self.width = self.y1 - self.y0
 
-    def run(self,xi):
+    def run(self,xi,view=False):
+        """
+        Wrapper to run the code
+
+        Arg:
+            - xi (nparray): array of input
+
+        Return:
+            - tavgB (float): Average temperature inside region B
+        """
         gridx, gridy = self.creategrid(100, 100, view=False)
         gx = self.calculatealpha(xi, gridx, gridy, 0.2, view=False)
         self.creatematrix(gx)
-        self.solve(view=False)
+        self.solve(view=view)
         tavgB = self.calcB()
         return tavgB
 
@@ -124,6 +135,18 @@ class Conduction:
         return kx
 
     def creategrid(self, nx=100, ny=100, view=False):
+        """
+        Create discretization for finite difference heat equation solver.
+
+        Args:
+             - nx (int): number of spacing on X direction. Default to 100. (number of points is nx+1)
+             - ny (int): number of spacing on Y direction. Default to 100. (number of points is ny+1)
+             - view (bool): visualize grid or not. Default to False.
+
+         Returns:
+             - gridx (nparray): x coordinates for each point across the space.
+             - gridy (nparray): y coordinates for each point across the space.
+        """
         self.nx = nx
         self.ny = ny
         xx = np.linspace(self.x0, self.x1, nx + 1)
@@ -149,9 +172,13 @@ class Conduction:
         Create RGF nodes in the domain.
 
         Args:
-            nx (int): number of element along x
-            ny (int): number of element along y
-            view (bool): display nodes or not
+            nx (int): number of spacing on X direction. Default to 10. (number of points is nx+1)
+            ny (int): number of spacing on Y direction. Default to 10. (number of points is ny+1)
+            view (bool): display nodes or not.
+
+        Returns:
+             - rf_gridx (nparray): x coordinates for each point across the space.
+             - rf_gridy (nparray): y coordinates for each point across the space.
         """
         rf_xx = np.linspace(self.x0, self.x1, nx+1)
         rf_yy = np.linspace(self.y0, self.y1, ny+1)
@@ -170,12 +197,25 @@ class Conduction:
         return rf_gridx,rf_gridy
 
     def grandomfield(self, theta, rf_gridx, rf_gridy):
+        """
+        Calculate the components inside the Gaussian random field.
+
+        Args:
+            - theta (float): Lengthscale of Kernel function
+            - rf_gridx (nparray):  x coordinates for each point of GRF grid across the space.
+            - rf_gridy (nparray):  y coordinates for each point of GRF grid across the space.
+
+        Returns:
+            - M (int): Number of dimension of the input variables.
+            - li (nparray): Eigenvalues of correlation matrix.
+            - phii (nparray): Eigenvectors of correlation matrix.
+        """
         self.theta = theta * np.ones(shape=[self.ndimen])
-        self.zeta = np.hstack((rf_gridx.reshape(self.rf_nn, 1), rf_gridy.reshape(self.rf_nn, 1)))
+        self.zeta = np.hstack((rf_gridx.reshape(self.rf_nn, 1), rf_gridy.reshape(self.rf_nn, 1,)))
         c_zetazeta = kernel(self.zeta, self.zeta, self.ndimen, self.theta)
-        li, phii = np.linalg.eig(c_zetazeta)
-        li = li.astype(float)
-        phii = phii.astype(float)
+        li, phii = np.linalg.eigh(c_zetazeta)
+        li = np.flip(li,0)
+        phii = np.flip(phii,1)
 
         for M in range(1,self.rf_nn+1):
             temp1 = np.sum(li[:M]) / np.sum(li)
@@ -190,10 +230,14 @@ class Conduction:
         c_zzeta = kernel(z, self.zeta, self.ndimen, self.theta).transpose()
         gztemp = np.zeros(shape=[M])
         for i in range(M):
-            gztemp[i] = (xi[i]/np.sqrt(li[i])) * np.dot(phii[i], c_zzeta)
+            gztemp[i] = (xi[i]/np.sqrt(li[i])) * np.dot(phii[:,i], c_zzeta)
         gz = np.sum(gztemp)
         return gz
 
+    def basisfunc(self,z,i,phii):
+        c_zzeta = kernel(z, self.zeta, self.ndimen, self.theta).transpose()
+        gztemp = np.dot(phii[:,i], c_zzeta)
+        return gztemp
 
 def kernel(XN, XM, nvar, theta):
     if XN.ndim == 1:
@@ -205,3 +249,32 @@ def kernel(XN, XM, nvar, theta):
         mdist[:, :, ii] = (cdist(X1, X2, 'euclidean') ** 2) / (theta[ii] ** 2)
     Psi = np.exp(-1 * np.sum(mdist, 2))
     return Psi
+
+if __name__ == "__main__":
+    case = 1
+    if case == 1:
+        test = Conduction()
+        gridx, gridy = test.creategrid(100, 100, view=False)
+        grfx, grfy = test.rndfgrid()
+        z = np.hstack((gridx.reshape(test.nn, 1), gridy.reshape(test.nn, 1)))
+        M, li, phii = test.grandomfield(0.2, grfx, grfy)
+        gx = np.zeros(shape=[np.size(z, 0)])
+        fig, axs = plt.subplots(nrows=4, ncols=5, figsize=(11, 11), subplot_kw={'xticks': [], 'yticks': []})
+        for j in range(20):
+            ax = axs.flat[j]
+            for i in range(np.size(z, 0)):
+                gx[i] = test.basisfunc(z[i, :], j, phii)
+            gxi = gx.reshape((np.size(gridx,0), np.size(gridx,1)))
+            surf = ax.imshow(gxi, cmap=cm.jet, extent=[-0.5, 0.5, -0.5, 0.5], origin='lower', interpolation='bilinear')
+        plt.tight_layout()
+        plt.show()
+    else:
+        xi = 1*np.random.randn(53)
+        t = time.time()
+        plate = Conduction()
+        tavgB = plate.run(xi, view=True)
+        print(tavgB)
+        elapsed = time.time() - t
+        print(elapsed,'s')
+
+

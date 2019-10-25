@@ -5,6 +5,7 @@ from scipy.optimize import minimize_scalar
 from scipy.optimize import minimize, fmin_cobyla
 from surrogate_models.supports.trendfunction import polytruncation, compute_regression_mat
 from surrogate_models.supports.krigloocv import loocv
+from surrogate_models.supports.krigloocv2 import loocv2
 from surrogate_models.supports.likelihood_func import likelihood
 from surrogate_models.supports.prediction import prediction
 import cma
@@ -164,7 +165,7 @@ class Kriging:
             self.KrigInfo["F"] = compute_regression_mat(self.KrigInfo["idx"], self.KrigInfo["X"], bound,
                                                         np.ones(shape=[self.KrigInfo["nvar"]]))
 
-    def train(self, parallel = False, disp=True):
+    def train(self, parallel=False, disp=True, pre_theta=None):
         """
         Train Kriging model
         
@@ -178,12 +179,18 @@ class Kriging:
         if disp:
             print("Begin train hyperparam.")
 
-        # Create multiple starting points
-        if len(self.KrigInfo["ubhyp"]) != self.nbhyp:
-            self.nbhyp = len(self.KrigInfo["ubhyp"])
+        # Isotropic gaussian kernel
+        if self.KrigInfo["kernel"] == ["iso_gaussian"]:
+            self.nbhyp = 1
+        elif len(self.KrigInfo["kernel"]) != 1 and "iso_gaussian" in self.KrigInfo["kernel"]:
+            raise NotImplementedError("Isotropic Gaussian kernel is not available for composite kernel")
         else:
-            pass
+            if len(self.KrigInfo["ubhyp"]) != self.nbhyp:
+                self.nbhyp = len(self.KrigInfo["ubhyp"])
+            else:
+                pass
 
+        # Create multiple starting points
         if self.KrigInfo['nrestart'] < 1:
             xhyp = self.nbhyp * [0]
         else:
@@ -194,11 +201,21 @@ class Kriging:
                 _, xhyp = sampling('sobolnew', len(self.KrigInfo["ubhyp"]), self.KrigInfo['nrestart'],
                                    result="real", upbound=self.KrigInfo["ubhyp"], lobound=self.KrigInfo["lbhyp"])
 
+        # multiple starting from pre-trained theta:
+        if pre_theta is not None:
+            xhyp = np.random.rand(self.KrigInfo['nrestart']-1,len(self.KrigInfo["ubhyp"])) + pre_theta
+            xhyp = np.vstack((pre_theta,xhyp))
+        else:
+            pass
+
         # Optimize hyperparam if number of hyperparameter is 1 using golden section method
         if self.nbhyp == 1:
             res = minimize_scalar(likelihood, bounds=(self.lb, self.ub), method='golden', args=(self.KrigInfo,'default',
                                                                                                 self.trainvar) )
-            best_x = np.array([res.x])
+            if self.KrigInfo["kernel"] == ["iso_gaussian"]:
+                best_x = res.x
+            else:
+                best_x = np.array([res.x])
             neglnlikecand = likelihood(best_x, self.KrigInfo, trainvar=self.trainvar)
             if disp:
                 print(f"Best hyperparameter is {best_x}")
@@ -236,7 +253,7 @@ class Kriging:
             # Calculate Kriging model based on the best hyperparam.
             self.KrigInfo = likelihood(best_x,self.KrigInfo,mode='all',trainvar=self.trainvar)
 
-    def loocvcalc(self, metrictype='mape'):
+    def loocvcalc(self, metrictype='mape',drm=None):
         """
         Calculate Leave-one-out Cross Validation metric of Kriging model
         Args:
@@ -267,10 +284,11 @@ class Kriging:
 
         """
 
-        self.KrigInfo["LOOCVerror"],self.KrigInfo["LOOCVpred"] = loocv(self.KrigInfo, errtype=metrictype)
+        # self.KrigInfo["LOOCVerror"],self.KrigInfo["LOOCVpred"] = loocv(self.KrigInfo, errtype=metrictype)
+        self.KrigInfo["LOOCVerror"], self.KrigInfo["LOOCVpred"] = loocv2(self.KrigInfo, errtype=metrictype,drmmodel=drm)
         return (self.KrigInfo["LOOCVerror"],self.KrigInfo["LOOCVpred"])
 
-    def predict(self,x,predtypes=['pred']):
+    def predict(self,x,predtypes=['pred'],drmmodel=None):
         """
         Prediction of Kriging model
         Args:
@@ -295,7 +313,7 @@ class Kriging:
             KeyError:
 
         """
-        result = prediction(x,self.KrigInfo,predtypes=predtypes)
+        result = prediction(x,self.KrigInfo,predtypes=predtypes, drm=drmmodel)
         return result
 
     def parallelopt(self,xhyp,parallel,optimbound,disp=True):
@@ -402,7 +420,7 @@ def tune_hyperparameters(KrigInfo, xhyp_ii, trainvar, ubhyp=None, lbhyp=None,
     elif KrigInfo["optimizer"] == "lbfgsb":
         if optimbound is None:
             raise ValueError('optimbound must be set if optimizer is lbfgsb.')
-        res = minimize(likelihood, xhyp_ii, method='L-BFGS-B',
+        res = minimize(likelihood, xhyp_ii, method='L-BFGS-B', options={'eps': 1e-03},
                        bounds=optimbound, args=(KrigInfo,'default',trainvar))
         bestxcand = res.x
         neglnlikecand = res.fun

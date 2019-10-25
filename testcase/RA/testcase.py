@@ -22,7 +22,7 @@ def evaluate (X,type = "fourbranches"):
         y = hidimenRA2(X)
     elif type.lower() == "bridge":
         for ii in range(nsample):
-            if ii % 50000 == 0 and ii != 0:
+            if ii % 5000 == 0 and ii != 0:
                 print("eval number",ii)
             num_tri = 6
             Ediag = np.ones(shape=num_tri) * X[ii,1]
@@ -36,9 +36,10 @@ def evaluate (X,type = "fourbranches"):
             y[ii, 0] = (res['uy'] + 0.1)
     elif type.lower() == 'heatcond':
         for ii in range(nsample):
-            print('run no.',ii+1)
             plate = Conduction()
-            y[ii,0] = (6-plate.run(X[ii,:]))
+            y[ii,0] = (3-plate.run(X[ii,:]))
+    elif type.lower() == "ishigami":
+        y = ishigami(X)
     else:
         raise NameError("Test case unavailable!")
 
@@ -94,3 +95,12 @@ def hidimenRA2(x):
 
     f = tempvar.reshape(-1,1) + 0.01 * np.sum(xtemp**2,axis=1).reshape(-1,1)
     return f
+
+def ishigami(x):
+    x1 = x[:, 0]
+    x2 = x[:, 1]
+    x3 = x[:, 2]
+    a = 7
+    b = 0.1
+    f = np.sin(x1) + a * (np.sin(x2))**2 + b * (np.sin(x1) * x3**4)
+    return f.reshape(-1,1)

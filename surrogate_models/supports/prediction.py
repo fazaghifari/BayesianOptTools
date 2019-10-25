@@ -4,6 +4,7 @@ from surrogate_models.supports.kernelfunc import calckernel
 from misc.sampling.samplingplan import standardize
 from surrogate_models.supports.trendfunction import compute_regression_mat
 from scipy.special import erf
+from scipy.spatial.distance import cdist
 
 
 def get_val(KrigInfo, key, num=None):
@@ -63,7 +64,7 @@ def get_val(KrigInfo, key, num=None):
     return val
 
 
-def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
+def prediction(x, KrigInfo, predtypes, num=None, drm=None,**kwargs):
     """Predict response using a given Kriging model.
 
     Calculates expected improvement (for optimization), SSqr, Kriging
@@ -161,6 +162,18 @@ def prediction(x, KrigInfo, predtypes, num=None, **kwargs):
             msg = (f"Kriging model dictionary 'normtype' value: "
                    f"'{KrigInfo['normtype']}' is not recognised.")
             raise ValueError(msg)
+
+    if drm is not None:
+        if drm.kernel != 'precomputed':
+            x = drm.transform(x.copy())
+            if KrigInfo['standardization'] is True:
+                x = standardize(x, 0, type='default',range=np.vstack((KrigInfo['lb2'], KrigInfo['ub2'])))
+        else:
+            feat = np.size(x,1)
+            k_mat = customkernel(x,KrigInfo['orig_X'],KrigInfo['kpcaw'],feat,type='gaussian')
+            x = drm.transform(k_mat)
+            if KrigInfo['standardization'] is True:
+                x = standardize(x, 0, type='default',range=np.vstack((KrigInfo['lb2'], KrigInfo['ub2'])))
 
     # Calculate number of sample points
     n = np.ma.size(X, axis=0)
@@ -298,3 +311,30 @@ def stdtoreal(f,KrigInfo,num=None):
         f = (KrigInfo["y_mean"] + KrigInfo["y_std"] * f)
 
     return f
+
+def customkernel(XN,XM,w,nvar,type='gaussian'):
+    if type == 'gaussian':
+        K = gausskernel(XN,XM,w,nvar)
+    elif type == 'poly':
+        K = polykernel(XN,XM,w,nvar)
+    else:
+        raise NotImplementedError('other type of kernel is not supported')
+
+    return K
+
+def polykernel(XN,XM,w,nvar):
+    g = 10**w[0]
+    c = 10**w[1]
+    d = w[2]
+    K = (g*np.dot(XN, XM.T)+c)**d
+    return K
+
+def gausskernel(XN,XM,w,nvar):
+    w = 10**w
+    mdist = np.zeros((np.size(XN, 0), np.size(XM, 0), nvar))
+    for ii in range(0, nvar):
+        X1 = np.transpose(np.array([XN[:, ii]]))
+        X2 = np.transpose(np.array([XM[:, ii]]))
+        mdist[:, :, ii] = (cdist(X1, X2, 'euclidean') ** 2) / (w[ii] ** 2)
+    Psi = np.exp(-0.5 * np.sum(mdist, 2))
+    return Psi

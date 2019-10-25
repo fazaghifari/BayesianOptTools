@@ -134,7 +134,7 @@ def initkriginfo(type, objective=1):
         type (str): 'single' or 'multi'. Now unused.
         objective (int, optional): Number of objective functions.
     """
-    print('DeprecationWarning: Consider changing initkriginfo calls to init_kriginfo')
+    # print('DeprecationWarning: Consider changing initkriginfo calls to init_kriginfo')
     return init_kriginfo(objectives=objective)
 
 

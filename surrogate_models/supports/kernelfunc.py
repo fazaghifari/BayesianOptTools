@@ -21,7 +21,7 @@ def calckernel(XN,XM,theta,nvar,**kwargs):
     """
     ker = kwargs.get('type', "gaussian")
     pls = kwargs.get('plscoeff', np.array([False]))
-    if ker.lower() == "gaussian":
+    if ker.lower() == "gaussian" or ker.lower() == "iso_gaussian":
         Psi = gaussian(XN,XM,theta,nvar,pls)
     elif ker.lower() == "exponential":
         Psi = exponential(XN, XM, theta, nvar,pls)

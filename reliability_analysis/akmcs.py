@@ -1,6 +1,7 @@
 import numpy as np
 from misc.sampling.samplingplan import realval
 from testcase.RA.testcase import evaluate
+from comet_ml import Experiment
 import time
 
 
@@ -42,8 +43,9 @@ class AKMCS:
         self.Gx = np.zeros(shape=[self.nsamp,1])
         self.sigmaG = np.zeros(shape=[1,self.nsamp])
         self.stop_criteria = 100 #assign large number
+        self.logging = None
 
-    def run(self, autoupdate=True, disp=True, savedatato=None):
+    def run(self, autoupdate=True, disp=True, savedatato=None, logging=True):
         """
         Run AKMCS analysis
 
@@ -55,6 +57,17 @@ class AKMCS:
         Return:
              None
         """
+        #logging
+        if logging:
+            self.logging = Experiment(api_key="iR4UV5pdBGahcbgfgGqnqL0nu",
+                                    project_name="akmcs", workspace="fazaghifari")
+            if savedatato is not None:
+                self.logging.set_name(savedatato)
+            else:
+                pass
+
+        else:
+            pass
         # Calculate Gx and SigmaG
         # Split init_samp to avoid memory error
         t1 = time.time()
@@ -132,8 +145,16 @@ class AKMCS:
                     print(f"iter no: {i+1}, Pf: {self.Pf}, stopcrit: {self.stop_criteria}, time(s): {elapsed}, "
                           f"ynew: {ynew}")
 
+                if logging:
+                    self.logging.log_parameter('krigtype',self.krigobj.KrigInfo['type'])
+                    outdict = {"Prob_fail":self.Pf,
+                            "stopcrit":self.stop_criteria,
+                            "time(s)":elapsed
+                    }
+                    self.logging.log_metrics(outdict,step=i+1)
+
                 if savedatato is not None:
-                    temparray = np.array([i,self.Pf,self.minU,elapsed])
+                    temparray = np.array([i,self.Pf,self.stop_criteria,elapsed])
                     if i == 0:
                         totaldata = temparray[:]
                     else:
@@ -143,7 +164,7 @@ class AKMCS:
 
                 if savedatato is not None:
                     filename = '../innout/' + savedatato
-                    np.savetxt(filename, totaldata, delimiter=',', header='iter,Pf,minU,time(s)')
+                    np.savetxt(filename, totaldata, delimiter=',', header='iter,Pf,stopcrit,time(s)')
                 else:
                     pass
 

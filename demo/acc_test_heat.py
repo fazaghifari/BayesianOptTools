@@ -5,7 +5,6 @@ from reliability_analysis.akmcs import AKMCS,mcpopgen
 from testcase.RA.testcase import evaluate
 from surrogate_models.kriging_model import Kriging
 from surrogate_models.kpls_model import KPLS
-from surrogate_models.kkpca_model import KKPCA
 from surrogate_models.supports.initinfo import initkriginfo
 import matplotlib.pyplot as plt
 import time
@@ -13,8 +12,10 @@ import time
 
 def generate_krig(init_samp, n_krigsamp, nvar,problem):
 
+    # Monte Carlo Sampling
     init_krigsamp = krigsamp()
-    ykrig = evaluate(init_krigsamp, type=problem)
+    print("Evaluating Kriging Sample")
+    ykrig = evaluate(init_krigsamp,problem)
     print(np.count_nonzero(ykrig <= 0))
 
     lb = (np.min(init_samp, axis=0))
@@ -32,13 +33,13 @@ def generate_krig(init_samp, n_krigsamp, nvar,problem):
     KrigInfo["ub"] = ub
     KrigInfo["lb"] = lb
     KrigInfo["nkernel"] = len(KrigInfo["kernel"])
-    # KrigInfo["n_princomp"] = 4
+    KrigInfo["n_princomp"] = 1
     KrigInfo["optimizer"] = "lbfgsb"
 
     #trainkrig
     drm = None
     t = time.time()
-    krigobj = Kriging(KrigInfo, standardization=True, standtype='default', normy=False, trainvar=False)
+    krigobj = KPLS(KrigInfo, standardization=True, standtype='default', normy=False, trainvar=False)
     krigobj.train(parallel=False)
     loocverr, _ = krigobj.loocvcalc()
     elapsed = time.time() - t
@@ -48,7 +49,7 @@ def generate_krig(init_samp, n_krigsamp, nvar,problem):
     return krigobj,loocverr,drm
 
 def krigsamp():
-    all = mcpopgen(type="lognormal",ndim=nvar,n_order=1,n_coeff=5, stddev=0.2, mean=1)
+    all = mcpopgen(type="normal", ndim=53, n_order=1, n_coeff=5)
     return all
 
 def pred(krigobj, init_samp, problem, drmmodel=None):
@@ -67,7 +68,7 @@ def pred(krigobj, init_samp, problem, drmmodel=None):
             else:
                 Gx[start:, :] = krigobj.predict(init_samp[start:, :], ['pred'], drmmodel=drmmodel)
 
-    init_samp_G = evaluate(init_samp, type=problem)
+    init_samp_G = np.loadtxt('../innout/out/heatcond22.csv', delimiter=',').reshape(-1,1)
 
     subs = np.transpose((init_samp_G - Gx))
     subs1 = np.transpose((init_samp_G - Gx) / init_samp_G)
@@ -80,16 +81,16 @@ def pred(krigobj, init_samp, problem, drmmodel=None):
 
 
 if __name__ == '__main__':
-    init_samp = np.loadtxt('../innout/akmcssamp.csv', delimiter=',')
+    init_samp = np.loadtxt('../innout/in/heat_samp2.csv', delimiter=',')
     dic = dict()
 
-    for i in range(5):
+    for i in range(20):
         print("--"*25)
         print("loop no.",i+1)
         print("--" * 25)
-        nvar = 40
+        nvar = 53
         n_krigsamp = 50
-        problem = 'hidimenra'
+        problem = 'heatcond'
 
         krigobj,loocverr,drm= generate_krig(init_samp,n_krigsamp,nvar,problem)
         MAPE = pred(krigobj,init_samp,problem,drmmodel=drm)

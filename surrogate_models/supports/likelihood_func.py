@@ -57,7 +57,12 @@ def likelihood (x, KrigInfo, mode='default', trainvar=True):
     else:
         pass
 
-    if type(x) is float or type(x) is int or type(x) is np.float64 or type(x) is np.int64:
+    if KrigInfo["kernel"] == ["iso_gaussian"]:
+        x = np.array([x]*nvar)
+    else:
+        pass
+
+    if type(x) is not np.ndarray:
         x = np.array([x])
     if KrigInfo["n_princomp"] is not False:
         nvar = KrigInfo["n_princomp"]
@@ -111,7 +116,6 @@ def likelihood (x, KrigInfo, mode='default', trainvar=True):
         return KrigInfo
     else:
         raise TypeError("Only have two modes, default and all, default return NegLnLike, all return KrigInfo")
-    print ("Psi = ",Psi)
 
 
 def nuggetset(x,KrigInfo,nvar,nkernel,trainvar):
@@ -197,7 +201,7 @@ def maincalc(Psi,eps,y,F,nsamp,n,SigmaSqr=None):
             # Concentrated Ln-likelihood
             SigmaSqr = (np.dot(np.transpose(y - np.dot(F,BE)),(temp3)))/n
             tempNegLnLike    = -1*(-(n/2)*np.log(SigmaSqr) - 0.5*LnDetPsi)
-            NegLnLike = tempNegLnLike
+            NegLnLike = tempNegLnLike[0, 0]
 
     except Exception as e:
         NegLnLike = 10000
