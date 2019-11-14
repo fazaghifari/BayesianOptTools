@@ -88,13 +88,16 @@ if __name__ == '__main__':
     y = data[:, 7:9].astype(float)
     cldat = data[:, 6].astype(float)
 
+    t = time.time()
     optim = Problem(X,y,cldat)
     optim.createkrig()
     xupdate, yupdate, metricall = optim.update_sample()
     clpred = optim.krigconst.predict(xupdate,['pred'])
+    elapsed = time.time() - t
+    print('Time required:', elapsed)
 
     totalupdate = np.hstack((xupdate,clpred,yupdate,metricall))
-    np.savetxt("../innout/Timnext.csv", totalupdate, delimiter=",",
+    np.savetxt("../innout/Timnext5.csv", totalupdate, delimiter=",",
                header="x,z,le_sweep,dihedral,root_chord,root_tc,CL,CD,dB(A),metric", comments="")
 
     plt.scatter(y[:, 0], y[:, 1], label='initial samples')

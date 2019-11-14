@@ -6,6 +6,7 @@ from testcase.RA.testcase import evaluate
 from surrogate_models.kriging_model import Kriging
 from surrogate_models.kpls_model import KPLS
 from surrogate_models.supports.initinfo import initkriginfo
+from sensitivity_analysis.sobol_ind import SobolIndices as SobolI
 import matplotlib.pyplot as plt
 import time
 
@@ -49,7 +50,7 @@ def generate_krig(init_samp, n_krigsamp, nvar,problem):
     return krigobj,loocverr,drm
 
 def krigsamp():
-    all = mcpopgen(type="normal", ndim=53, n_order=1, n_coeff=5)
+    all = mcpopgen(type="normal", ndim=53, n_order=2, n_coeff=1)
     return all
 
 def pred(krigobj, init_samp, problem, drmmodel=None):
@@ -77,14 +78,35 @@ def pred(krigobj, init_samp, problem, drmmodel=None):
     MAPE = 100 * np.sum(abs(subs1)) / nsamp
     print("RMSE = ", RMSE)
     print("MAPE = ", MAPE, "%")
-    return MAPE
+    mean = np.mean(Gx)
+    stdev = np.std(Gx)
+    return MAPE, RMSE, mean, stdev
+
+def sensitivity(krigobj,init_samp,nvar):
+    lb = (np.min(init_samp, axis=0))
+    ub = (np.max(init_samp, axis=0))
+    lb = np.hstack((lb,lb))
+    ub = np.hstack((ub,ub))
+    testSA = SobolI(nvar, krigobj, None, ub, lb)
+    result = testSA.analyze(True, True, False)
+    for key in result.keys():
+        print(key+':')
+        if type(result[key]) is not dict:
+            print(result[key])
+        else:
+            pass
+            # for subkey in result[key].keys():
+            #     print(subkey+':', result[key][subkey])
+
+    return result
 
 
 if __name__ == '__main__':
     init_samp = np.loadtxt('../innout/in/heat_samp2.csv', delimiter=',')
     dic = dict()
 
-    for i in range(20):
+    for i in range(50):
+        t1 = time.time()
         print("--"*25)
         print("loop no.",i+1)
         print("--" * 25)
@@ -92,5 +114,41 @@ if __name__ == '__main__':
         n_krigsamp = 50
         problem = 'heatcond'
 
-        krigobj,loocverr,drm= generate_krig(init_samp,n_krigsamp,nvar,problem)
-        MAPE = pred(krigobj,init_samp,problem,drmmodel=drm)
+        # Create Kriging model
+        krigobj, loocverr, drm = generate_krig(init_samp, n_krigsamp, nvar, problem)
+        # Predict and UQ
+        MAPE, RMSE, mean, stdev = pred(krigobj, init_samp, problem, drmmodel=drm)
+        # Sensitivity Analysis
+        t = time.time()
+        result = sensitivity(krigobj, init_samp, nvar)
+        SAtime = time.time() - t
+
+        # Create UQ and Acc test output file
+        temparray = np.array([krigobj.KrigInfo['NegLnLike'], loocverr, RMSE, MAPE, mean, stdev, SAtime])
+        if i == 0:
+            totaldata = temparray[:]
+        else:
+            totaldata = np.vstack((totaldata, temparray))
+
+        np.savetxt('../innout/out/acctest_heat_KPLS1.csv', totaldata, fmt='%10.5f', delimiter=',',
+                   header='Neglnlike,LOOCV Error,RMSE,MAPE,Mean,Std Dev,SA time')
+
+        # Create SA output file
+        mylist = []
+        for ii in range(53):
+            mylist.append("S" + str(ii + 1) + ", ")
+        for ii in range(52):
+            mylist.append("St" + str(ii + 1) + ", ")
+        mylist.append("St" + str(53))
+        SAhead = ""
+        for header in mylist:
+            SAhead += header
+        saresult = np.array([np.hstack((result['first'], result['total']))])
+        if i == 0:
+            sadata = saresult[:]
+        else:
+            sadata = np.vstack((sadata, saresult))
+        np.savetxt('../innout/out/acctest_heat_KPLS1_SA.csv', sadata, fmt='%10.5f', delimiter=',',
+                   header=SAhead)
+        t2 = time.time() - t1
+        print("Time for one loop: ",t2)

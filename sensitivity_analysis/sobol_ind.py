@@ -43,8 +43,33 @@ class SobolIndices:
              indices (dictionary): dictionary containing the sobol indices
         """
         if self.krigobj is not None:
-            self.ya = self.krigobj.predict(self.A, 'pred')
-            self.yb = self.krigobj.predict(self.B, 'pred')
+            nsamp = np.size(self.A, axis=0)
+            self.ya = np.zeros(shape=[nsamp, 1])
+            if nsamp <= 10000:
+                self.ya = self.krigobj.predict(self.A, ['pred'])
+            else:
+                run_times = int(np.ceil(nsamp / 10000))
+                for i in range(run_times):
+                    start = i * 10000
+                    stop = (i + 1) * 10000
+                    if i != (run_times - 1):
+                        self.ya[start:stop, :] = self.krigobj.predict(self.A[start:stop, :], ['pred'])
+                    else:
+                        self.ya[start:, :] = self.krigobj.predict(self.A[start:, :], ['pred'])
+
+            self.yb = np.zeros(shape=[nsamp, 1])
+            if nsamp <= 10000:
+                self.yb = self.krigobj.predict(self.B, ['pred'])
+            else:
+                run_times = int(np.ceil(nsamp / 10000))
+                for i in range(run_times):
+                    start = i * 10000
+                    stop = (i + 1) * 10000
+                    if i != (run_times - 1):
+                        self.yb[start:stop, :] = self.krigobj.predict(self.B[start:stop, :], ['pred'])
+                    else:
+                        self.yb[start:, :] = self.krigobj.predict(self.B[start:, :], ['pred'])
+
         elif self.krigobj is None and self.problem is not None:
             self.ya = evaluate(self.A,self.problem)
             self.yb = evaluate(self.B,self.problem)
@@ -150,6 +175,6 @@ class SobolIndices:
 if __name__ == '__main__':
     ub = np.array([np.pi, np.pi, np.pi]*2)
     lb = -ub
-    testSA = SobolIndices(3,None,"ishigami",ub,lb)
-    result = testSA.analyze(True,True,True)
+    testSA = SobolIndices(40,None,"hidimenra",ub,lb)
+    result = testSA.analyze(True,True,False)
     print(result)
