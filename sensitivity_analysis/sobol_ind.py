@@ -20,7 +20,7 @@ class SobolIndices:
         self.nvar = nvar
         self.krigobj = krigobj
         self.problem = problem
-        self.n = int(1e4)
+        self.n = int(2e4)
         if ub is not None and lb is not None:
             _,init_mat = sampling("sobolnew", self.nvar*2, self.n, result="real", upbound=ub, lobound=lb)
         else:

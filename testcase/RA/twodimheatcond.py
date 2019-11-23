@@ -162,7 +162,7 @@ class Conduction:
                 temp2 = np.array([[xx[i], -0.5], [xx[i], 0.5]])
                 plt.plot(temp1[:, 0], temp1[:, 1], 'k')
                 plt.plot(temp2[:, 0], temp2[:, 1], 'k')
-            plt.scatter(self.gridx, self.gridy)
+            # plt.scatter(gridx, gridy)
             plt.show()
 
         return gridx, gridy
@@ -251,7 +251,7 @@ def kernel(XN, XM, nvar, theta):
     return Psi
 
 if __name__ == "__main__":
-    case = 1
+    case = 0
     if case == 1:
         test = Conduction()
         gridx, gridy = test.creategrid(100, 100, view=False)

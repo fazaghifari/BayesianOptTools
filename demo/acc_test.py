@@ -33,13 +33,13 @@ def generate_krig(init_samp, n_krigsamp, nvar,problem):
     KrigInfo["ub"] = ub
     KrigInfo["lb"] = lb
     KrigInfo["nkernel"] = len(KrigInfo["kernel"])
-    KrigInfo["n_princomp"] = 1
+    # KrigInfo["n_princomp"] = 1
     KrigInfo["optimizer"] = "lbfgsb"
 
     #trainkrig
     drm = None
     t = time.time()
-    krigobj = KPLS(KrigInfo, standardization=True, standtype='default', normy=False, trainvar=False)
+    krigobj = Kriging(KrigInfo, standardization=True, standtype='default', normy=False, trainvar=False)
     krigobj.train(parallel=False)
     loocverr, _ = krigobj.loocvcalc()
     elapsed = time.time() - t
@@ -49,7 +49,7 @@ def generate_krig(init_samp, n_krigsamp, nvar,problem):
     return krigobj,loocverr,drm
 
 def krigsamp():
-    all = mcpopgen(type="lognormal",ndim=nvar,n_order=2,n_coeff=1, stddev=0.2, mean=1)
+    all = mcpopgen(type="lognormal",ndim=nvar,n_order=2,n_coeff=2.4, stddev=0.2, mean=1)
     return all
 
 def pred(krigobj, init_samp, problem, drmmodel=None):
@@ -100,15 +100,15 @@ def sensitivity(krigobj,init_samp,nvar,second=False):
 
 
 if __name__ == '__main__':
-    init_samp = np.loadtxt('../innout/in/akmcssamp.csv', delimiter=',')
+    init_samp = np.loadtxt('../innout/in/lognormal100.csv', delimiter=',')
     dic = dict()
 
-    for i in range(50):
+    for i in range(45):
         print("--"*25)
         print("loop no.",i+1)
         print("--" * 25)
-        nvar = 40
-        n_krigsamp = 100
+        nvar = 100
+        n_krigsamp = 240
         problem = 'hidimenra'
 
         # Create Kriging model
@@ -130,17 +130,17 @@ if __name__ == '__main__':
         else:
             totaldata = np.vstack((totaldata, temparray))
 
-        np.savetxt('../innout/out/40/acctest_analytic40_100samp_KPLS1.csv', totaldata, fmt='%10.5f', delimiter=',',
+        np.savetxt('../innout/out/100/acctest_analytic100_240samp_OK.csv', totaldata, fmt='%10.5f', delimiter=',',
                    header='Neglnlike,LOOCV Error,RMSE,MAPE,Mean,Std Dev,SA time,Krig time')
 
 
         # Create SA output file
         mylist = []
-        for ii in range(40):
+        for ii in range(100):
             mylist.append("S"+str(ii+1)+", ")
-        for ii in range(39):
+        for ii in range(99):
             mylist.append("St"+str(ii+1)+", ")
-        mylist.append("St" + str(40))
+        mylist.append("St" + str(100))
         SAhead = ""
         for header in mylist:
             SAhead += header
@@ -149,5 +149,5 @@ if __name__ == '__main__':
             sadata = saresult[:]
         else:
             sadata = np.vstack((sadata, saresult))
-        np.savetxt('../innout/out/40/acctest_analytic40_100samp_KPLS1_SA.csv', sadata, fmt='%10.5f',delimiter=',',
+        np.savetxt('../innout/out/100/acctest_analytic100_240samp_OK_SA.csv', sadata, fmt='%10.5f',delimiter=',',
                    header=SAhead)

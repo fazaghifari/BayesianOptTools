@@ -33,7 +33,7 @@ def generate_krig(init_samp, n_krigsamp, nvar,problem):
     KrigInfo["ub"] = ub
     KrigInfo["lb"] = lb
     KrigInfo["nkernel"] = len(KrigInfo["kernel"])
-    KrigInfo["n_princomp"] = 1
+    KrigInfo["n_princomp"] = 4
     KrigInfo["optimizer"] = "lbfgsb"
 
     #trainkrig
@@ -49,10 +49,10 @@ def generate_krig(init_samp, n_krigsamp, nvar,problem):
     return krigobj,loocverr,drm
 
 def krigsamp():
-    E12 = mcpopgen(type="lognormal", ndim=2, n_order=1, n_coeff=6, stddev=2.1e10, mean=2.1e11)
-    A1 = mcpopgen(type="lognormal", ndim=1, n_order=1, n_coeff=6, stddev=2e-4, mean=2e-3)
-    A2 = mcpopgen(type="lognormal", ndim=1, n_order=1, n_coeff=6, stddev=1e-4, mean=1e-3)
-    P = mcpopgen(type="gumbel", ndim=6, n_order=1, n_coeff=6, stddev=7.5e3, mean=5e4)
+    E12 = mcpopgen(type="lognormal", ndim=2, n_order=1, n_coeff=3, stddev=2.1e10, mean=2.1e11)
+    A1 = mcpopgen(type="lognormal", ndim=1, n_order=1, n_coeff=3, stddev=2e-4, mean=2e-3)
+    A2 = mcpopgen(type="lognormal", ndim=1, n_order=1, n_coeff=3, stddev=1e-4, mean=1e-3)
+    P = mcpopgen(type="gumbel", ndim=6, n_order=1, n_coeff=3, stddev=7.5e3, mean=5e4)
     all = np.hstack((E12, A1, A2, P))
     return all
 
@@ -133,8 +133,8 @@ if __name__ == '__main__':
         else:
             totaldata = np.vstack((totaldata, temparray))
 
-        np.savetxt('../innout/out/bridge/acctest_bridge_60samp_KPLS1.csv', totaldata, fmt='%10.5f', delimiter=',',
-                   header='Neglnlike,LOOCV Error,RMSE,MAPE,Mean,Std Dev,SA time,Krig time')
+        # np.savetxt('../innout/out/bridge/acctest_bridge_60samp_KPLS1.csv', totaldata, fmt='%10.5f', delimiter=',',
+        #            header='Neglnlike,LOOCV Error,RMSE,MAPE,Mean,Std Dev,SA time,Krig time')
 
         # Create SA output file
         mylist = []
@@ -153,5 +153,5 @@ if __name__ == '__main__':
             sadata = saresult[:]
         else:
             sadata = np.vstack((sadata, saresult))
-        np.savetxt('../innout/out/bridge/acctest_bridge_60samp_KPLS1_SA.csv', sadata, fmt='%10.5f', delimiter=',',
-                   header=SAhead)
+        # np.savetxt('../innout/out/bridge/acctest_bridge_60samp_KPLS1_SA.csv', sadata, fmt='%10.5f', delimiter=',',
+        #            header=SAhead)

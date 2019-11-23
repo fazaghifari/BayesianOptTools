@@ -5,8 +5,8 @@ from testcase.RA.testcase import evaluate
 from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
                                AutoMinorLocator)
 
-init_samp = np.loadtxt('../innout/in/bridge3.csv', delimiter=',')
-init_samp_G = np.loadtxt('../innout/out/bridge3_gx.csv', delimiter=',')
+init_samp = np.loadtxt('../innout/in/heat_samp2.csv', delimiter=',')
+init_samp_G = np.loadtxt('../innout/out/heatcond22.csv', delimiter=',')
 iqr = np.subtract(*np.percentile(init_samp_G, [75, 25]))
 kplslist = [0,0,0,0,0]
 rrmselist = [0,0,0,0,0]
@@ -18,9 +18,9 @@ stddevreal = np.std(init_samp_G)
 
 for i in range(5):
     if i == 4:
-        name = "../innout/out/bridge/acctest_bridge_OK.csv"
+        name = "../innout/out/heat/acctest_heat_200samp_OK.csv"
     else:
-        name = "../innout/out/bridge/acctest_bridge_KPLS"+str(i+1)+".csv"
+        name = "../innout/out/heat/acctest_heat_200samp_KPLS"+str(i+1)+".csv"
     kplslist[i] = pd.read_csv(name)
     meanlist[i] = kplslist[i].Mean
     stddevlist[i] = kplslist[i]['Std Dev']
@@ -35,7 +35,7 @@ plt.figure(1, figsize=[10,9])
 plt.boxplot(rrmselist, vert=False, flierprops=red_square, showmeans=True, meanprops=meanpointprops, labels=label_list)
 plt.xlabel('Normalized RMSE',fontsize=20)
 plt.xscale('log')
-plt.xlim([1e-2,1])
+plt.xlim([6e-2,1])
 # plt.axes().xaxis.set_minor_locator(AutoMinorLocator())
 plt.tick_params(axis='both', which='both', labelsize=16)
 plt.grid(which='both',axis='both',linestyle='--')
@@ -44,7 +44,7 @@ plt.figure(2, figsize=[10,9])
 plt.boxplot(mapelist, vert=False, flierprops=red_square, showmeans=True, meanprops=meanpointprops, labels=label_list)
 plt.xlabel('Mean Absolute Relative Error',fontsize=20)
 plt.xscale('log')
-plt.xlim([1e-2,1])
+plt.xlim([6e-2,1])
 # plt.axes().xaxis.set_minor_locator(AutoMinorLocator())
 plt.tick_params(axis='both', which='both', labelsize=16)
 plt.grid(which='both',axis='both',linestyle='--')
@@ -53,20 +53,22 @@ plt.figure(3, figsize=[10,9])
 plt.boxplot(meanlist, vert=False, flierprops=red_square, showmeans=True, meanprops=meanpointprops, labels=label_list)
 plt.axvline(x=meanreal)
 plt.xlabel('$\mu f(x)$',fontsize=20)
-plt.xscale('log')
-plt.xlim([2e-2,4e-2])
+# plt.xscale('log')
+plt.xlim([0.9,1])
 # plt.axes().xaxis.set_minor_locator(AutoMinorLocator())
 plt.tick_params(axis='both', which='both', labelsize=16)
+plt.ticklabel_format(style='sci',axis='x')
 plt.grid(which='both',axis='both',linestyle='--')
 
 plt.figure(4, figsize=[10,9])
 plt.boxplot(stddevlist, vert=False, flierprops=red_square, showmeans=True, meanprops=meanpointprops, labels=label_list)
 plt.axvline(x=stddevreal)
 plt.xlabel('$\sigma f(x)$',fontsize=20)
-plt.xscale('log')
-plt.xlim([6e-3,1e-2])
+# plt.xscale('log')
+plt.xlim([0.3,0.6])
 # plt.axes().xaxis.set_minor_locator(AutoMinorLocator())
 plt.tick_params(axis='both', which='both', labelsize=16)
+plt.ticklabel_format(style='sci',axis='x')
 plt.grid(which='both',axis='both',linestyle='--')
 
 plt.show()

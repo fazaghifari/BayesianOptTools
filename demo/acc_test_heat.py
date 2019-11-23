@@ -11,12 +11,14 @@ import matplotlib.pyplot as plt
 import time
 
 
-def generate_krig(init_samp, n_krigsamp, nvar,problem):
+def generate_krig(init_samp, n_krigsamp, nvar,problem,ii):
 
     # Monte Carlo Sampling
-    init_krigsamp = krigsamp()
+    file1 = '../innout/heatsamp/heat100_in_'+str(ii+1)+'.csv'
+    file2 = '../innout/heatsamp/heat100_out_' + str(ii + 1) + '.csv'
+    init_krigsamp = np.loadtxt(file1, delimiter=',')
     print("Evaluating Kriging Sample")
-    ykrig = evaluate(init_krigsamp,problem)
+    ykrig = np.loadtxt(file2, delimiter=',').reshape(-1,1)
     print(np.count_nonzero(ykrig <= 0))
 
     lb = (np.min(init_samp, axis=0))
@@ -34,7 +36,7 @@ def generate_krig(init_samp, n_krigsamp, nvar,problem):
     KrigInfo["ub"] = ub
     KrigInfo["lb"] = lb
     KrigInfo["nkernel"] = len(KrigInfo["kernel"])
-    KrigInfo["n_princomp"] = 1
+    KrigInfo["n_princomp"] = 4
     KrigInfo["optimizer"] = "lbfgsb"
 
     #trainkrig
@@ -105,7 +107,7 @@ if __name__ == '__main__':
     init_samp = np.loadtxt('../innout/in/heat_samp2.csv', delimiter=',')
     dic = dict()
 
-    for i in range(50):
+    for i in range(5):
         t1 = time.time()
         print("--"*25)
         print("loop no.",i+1)
@@ -115,23 +117,25 @@ if __name__ == '__main__':
         problem = 'heatcond'
 
         # Create Kriging model
-        krigobj, loocverr, drm = generate_krig(init_samp, n_krigsamp, nvar, problem)
+        t = time.time()
+        krigobj, loocverr, drm = generate_krig(init_samp, n_krigsamp, nvar, problem,i)
+        ktime = time.time() - t
         # Predict and UQ
         MAPE, RMSE, mean, stdev = pred(krigobj, init_samp, problem, drmmodel=drm)
         # Sensitivity Analysis
-        t = time.time()
+        t1 = time.time()
         result = sensitivity(krigobj, init_samp, nvar)
-        SAtime = time.time() - t
+        SAtime = time.time() - t1
 
         # Create UQ and Acc test output file
-        temparray = np.array([krigobj.KrigInfo['NegLnLike'], loocverr, RMSE, MAPE, mean, stdev, SAtime])
+        temparray = np.array([krigobj.KrigInfo['NegLnLike'], loocverr, RMSE, MAPE, mean, stdev, SAtime, ktime])
         if i == 0:
             totaldata = temparray[:]
         else:
             totaldata = np.vstack((totaldata, temparray))
 
-        np.savetxt('../innout/out/acctest_heat_KPLS1.csv', totaldata, fmt='%10.5f', delimiter=',',
-                   header='Neglnlike,LOOCV Error,RMSE,MAPE,Mean,Std Dev,SA time')
+        np.savetxt('../innout/out/heat/acctest_heat_100samp_KPLS4.csv', totaldata, fmt='%10.5f', delimiter=',',
+                   header='Neglnlike,LOOCV Error,RMSE,MAPE,Mean,Std Dev,SA time,Krig time')
 
         # Create SA output file
         mylist = []
@@ -148,7 +152,7 @@ if __name__ == '__main__':
             sadata = saresult[:]
         else:
             sadata = np.vstack((sadata, saresult))
-        np.savetxt('../innout/out/acctest_heat_KPLS1_SA.csv', sadata, fmt='%10.5f', delimiter=',',
+        np.savetxt('../innout/out/heat/acctest_heat_100samp_KPLS4_SA.csv', sadata, fmt='%10.5f', delimiter=',',
                    header=SAhead)
         t2 = time.time() - t1
         print("Time for one loop: ",t2)

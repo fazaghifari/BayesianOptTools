@@ -4,20 +4,20 @@ import matplotlib.pyplot as plt
 from surrogate_models.supports.errperf import errperf
 from copy import deepcopy
 
-nvar = 100
+nvar = 10
 firstorder = [0,0,0,0,0]
 totalorder = [0,0,0,0,0]
 firsterror = [0,0,0,0,0]
 totalerror = [0,0,0,0,0]
-real_SA = pd.read_csv("../innout/out/100/acctest_analytic100_REAL_SA.csv")
+real_SA = pd.read_csv("../innout/out/bridge/acctest_bridge_real_SA.csv")
 real_first, real_total = real_SA.iloc[:, :nvar], real_SA.iloc[:, nvar:]
 for i in range(5):
     if i == 4:
-        name = "../innout/out/100/acctest_analytic100_OK_SA.csv"
+        name = "../innout/out/bridge/acctest_bridge_60samp_OK_SA.csv"
     else:
-        name = "../innout/out/100/acctest_analytic100_KPLS" + str(i + 1) + "_SA.csv"
+        name = "../innout/out/bridge/acctest_bridge_60samp_KPLS" + str(i + 1) + "_SA.csv"
     temporary = pd.read_csv(name)
-    firstorder[i], totalorder[i] = temporary.iloc[:, :nvar], temporary.iloc[:, nvar:]
+    firstorder[i], totalorder[i] = temporary.iloc[:, :nvar], temporary.iloc[:, nvar:2*nvar]
     temperrfirst = np.zeros(50)
     temperrtot = deepcopy(temperrfirst)
     for ii in range(50):
