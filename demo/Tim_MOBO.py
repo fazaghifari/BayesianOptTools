@@ -82,11 +82,11 @@ class Problem:
         return stat
 
 if __name__ == '__main__':
-    df = pd.read_csv('../innout/opt_data_60.csv', sep=',', index_col='Name')
+    df = pd.read_csv('../innout/tim/opt_data.csv', sep=',', index_col='code')
     data = df.values
-    X = data[:, 0:6].astype(float)
-    y = data[:, 7:9].astype(float)
-    cldat = data[:, 6].astype(float)
+    X = data[:, 0:11].astype(float)
+    y = data[:, 12:14].astype(float)
+    cldat = data[:, 11].astype(float)
 
     t = time.time()
     optim = Problem(X,y,cldat)
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     print('Time required:', elapsed)
 
     totalupdate = np.hstack((xupdate,clpred,yupdate,metricall))
-    np.savetxt("../innout/Timnext5.csv", totalupdate, delimiter=",",
+    np.savetxt("../innout/tim/nextpoints.csv", totalupdate, delimiter=",",
                header="x,z,le_sweep,dihedral,root_chord,root_tc,CL,CD,dB(A),metric", comments="")
 
     plt.scatter(y[:, 0], y[:, 1], label='initial samples')

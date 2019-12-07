@@ -12,6 +12,7 @@ Rheadata
 .idea/
 *.iml
 innout/
+mythesis/
 
 # C extensions
 *.so
