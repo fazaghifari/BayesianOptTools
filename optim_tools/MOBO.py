@@ -8,6 +8,7 @@ from optim_tools.parego import paregopre
 from optim_tools.acquifunc_opt import run_single_opt,run_multi_opt
 from surrogate_models.supports.trendfunction import compute_regression_mat
 from surrogate_models.supports.likelihood_func import likelihood
+import time
 
 
 class MOBO:
@@ -51,7 +52,7 @@ class MOBO:
         self.krigconstlist = expconst
         self.cheapconstlist = chpconst
 
-    def run(self,disp=True):
+    def run(self,disp=True,infeasible=None):
         """
         Run multi objective unconstrained Bayesian optimization.
 
@@ -70,6 +71,21 @@ class MOBO:
         self.yall = np.zeros(shape=[np.size(self.kriglist[0].KrigInfo["y"],axis=0),len(self.kriglist)])
         for ii in range(np.size(self.yall,axis=1)):
             self.yall[:,ii] = self.kriglist[ii].KrigInfo["y"][:,0]
+
+        if infeasible is not None:
+            self.yall = np.delete(self.yall.copy(),infeasible,0)
+            self.Xall = np.delete(self.Xall.copy(), infeasible, 0)
+        else:
+            pass
+
+        if self.moboInfo["refpointtype"] == 'static':
+            refpbound1 = np.where(self.yall[:, 0] > self.moboInfo["refpoint"][0])[0]
+            self.yall = np.delete(self.yall.copy(), refpbound1, 0)
+            self.Xall = np.delete(self.Xall.copy(), refpbound1, 0)
+            refpbound2 = np.where(self.yall[:, 1] > self.moboInfo["refpoint"][1])[0]
+            self.yall = np.delete(self.yall.copy(), refpbound2, 0)
+            self.Xall = np.delete(self.Xall.copy(), refpbound2, 0)
+
         self.ypar,_ = searchpareto.paretopoint(self.yall)
 
         print("Begin multi-objective Bayesian optimization process.")
@@ -229,6 +245,7 @@ class MOBO:
         yall = self.yall
 
         for ii in range(self.multiupdate):
+            t1 = time.time()
             if disp:
                 print(f"update number {ii+1}")
             else:
@@ -261,6 +278,9 @@ class MOBO:
 
             yall = np.vstack((yall,yprednext))
             ypartemp,_ = searchpareto.paretopoint(yall)
+
+            if disp:
+                print("time: ",time.time()-t1," s")
 
         return xalltemp,yalltemp,metricall
 
@@ -421,7 +441,7 @@ def moboinfocheck(moboInfo, autoupdate):
         moboInfo["acquifuncopt"] = "lbfgsb"
         print("The acquisition function optimizer is not specified, set to L-BFGS-B.")
     else:
-        availableacqoptimizer = ['lbfgsb', 'cobyla', 'cmaes']
+        availableacqoptimizer = ['lbfgsb', 'cobyla', 'cmaes', 'ga']
         if moboInfo["acquifuncopt"].lower() not in availableacqoptimizer:
             raise ValueError(moboInfo["acquifuncopt"], " is not a valid acquisition function optimizer.")
         else:

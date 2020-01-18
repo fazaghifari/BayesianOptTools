@@ -2,6 +2,7 @@ import numpy as np
 from misc.sampling.samplingplan import realval
 from scipy.optimize import minimize, fmin_cobyla
 from optim_tools.ehvi.EHVIcomputation import ehvicalc
+from optim_tools.ga.uncGA import uncGA
 from misc.constfunc import sweepdiffcheck,FoongConst
 import cma
 
@@ -80,9 +81,9 @@ def run_single_opt(krigobj, soboInfo, krigconstlist=None, cheapconstlist=None):
         xnextcand = np.zeros(shape=[soboInfo["nrestart"], krigobj.KrigInfo["nvar"]])
         fnextcand = np.zeros(shape=[soboInfo["nrestart"]])
         optimbound = []
-        for i in range(len(krigobj.KrigInfo["ubhyp"])):
-            optimbound.append(lambda x, Kriginfo, aa, bb, itemp=i: x[itemp] - krigobj.KrigInfo["lbhyp"][itemp])
-            optimbound.append(lambda x, Kriginfo, aa, bb, itemp=i: krigobj.KrigInfo["ubhyp"][itemp] - x[itemp])
+        for i in range(len(krigobj.KrigInfo["ub"])):
+            optimbound.append(lambda x, krigobj, aa, bb, cc, itemp=i: x[itemp] - krigobj.KrigInfo["lb"][itemp])
+            optimbound.append(lambda x, krigobj, aa, bb, cc, itemp=i: krigobj.KrigInfo["ub"][itemp] - x[itemp])
         for im in range(0, soboInfo["nrestart"]):
             if krigconstlist is None and cheapconstlist is None:  # For unconstrained problem
                 res = fmin_cobyla(krigobj.predict, Xrand[im,:], optimbound,
@@ -150,6 +151,14 @@ def run_multi_opt(kriglist, moboInfo, ypar, krigconstlist=None, cheapconstlist=N
         xnext = xnextcand[I, :]
         fnext = fnextcand[I]
 
+    elif acquifuncopt.lower() == 'ga':
+        if krigconstlist is None and cheapconstlist is None:
+            xnext, fnext,_ = uncGA(acqufunhandle,lb=kriglist[0].KrigInfo["lb"],ub=kriglist[0].KrigInfo["ub"],
+                                           args=(ypar,moboInfo,kriglist))
+        else:
+            xnext, fnext, _ = uncGA(multiconstfun, lb=kriglist[0].KrigInfo["lb"], ub=kriglist[0].KrigInfo["ub"],
+                                    args=(ypar, kriglist, moboInfo, krigconstlist, cheapconstlist))
+
     elif acquifuncopt.lower() == 'lbfgsb':
         Xrand = realval(kriglist[0].KrigInfo["lb"], kriglist[0].KrigInfo["ub"],
                         np.random.rand(moboInfo["nrestart"], kriglist[0].KrigInfo["nvar"]))
@@ -162,7 +171,7 @@ def run_multi_opt(kriglist, moboInfo, ypar, krigconstlist=None, cheapconstlist=N
                                                                                                     kriglist))
                 xnextcand[im,:] = res.x
                 fnextcand[im] = res.fun
-            else:  # For constrained problem (on progress)
+            else:  # For constrained problem
                 res = minimize(multiconstfun,Xrand[im,:],method='L-BFGS-B',bounds=lbfgsbbound,
                                args=(ypar, kriglist, moboInfo, krigconstlist, cheapconstlist))
                 xnextcand[im, :] = res.x
@@ -177,9 +186,9 @@ def run_multi_opt(kriglist, moboInfo, ypar, krigconstlist=None, cheapconstlist=N
         xnextcand = np.zeros(shape=[moboInfo["nrestart"], kriglist[0].KrigInfo["nvar"]])
         fnextcand = np.zeros(shape=[moboInfo["nrestart"]])
         optimbound = []
-        for i in range(len(kriglist[0].KrigInfo["ubhyp"])):
-            optimbound.append(lambda x, Kriginfo, aa, bb, itemp=i: x[itemp] - kriglist[0].KrigInfo["lbhyp"][itemp])
-            optimbound.append(lambda x, Kriginfo, aa, bb, itemp=i: kriglist[0].KrigInfo["ubhyp"][itemp] - x[itemp])
+        for i in range(len(kriglist[0].KrigInfo["ub"])):
+            optimbound.append(lambda x, cc, kriglist, dd, aa, bb, itemp=i: x[itemp] - kriglist[0].KrigInfo["lb"][itemp])
+            optimbound.append(lambda x, cc, kriglist, dd, aa, bb, itemp=i: kriglist[0].KrigInfo["ub"][itemp] - x[itemp])
         for im in range(0, moboInfo["nrestart"]):
             if krigconstlist is None and cheapconstlist is None:  # For unconstrained problem
                 res = fmin_cobyla(acqufunhandle, Xrand[im,:], optimbound,

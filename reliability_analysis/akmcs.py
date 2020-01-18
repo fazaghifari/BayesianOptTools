@@ -2,6 +2,7 @@ import numpy as np
 from misc.sampling.samplingplan import realval
 from testcase.RA.testcase import evaluate
 from comet_ml import Experiment
+import matplotlib.pyplot as plt
 import time
 
 
@@ -45,7 +46,8 @@ class AKMCS:
         self.stop_criteria = 100 #assign large number
         self.logging = None
 
-    def run(self, autoupdate=True, disp=True, savedatato=None, logging=True):
+    def run(self, autoupdate=True, disp=True, savedatato=None, logging=True, saveimageto=None, plotdatapos=None,
+            plotdataneg=None):
         """
         Run AKMCS analysis
 
@@ -70,6 +72,7 @@ class AKMCS:
             pass
         # Calculate Gx and SigmaG
         # Split init_samp to avoid memory error
+        krig_initsamp = self.krigobj.KrigInfo['X']
         t1 = time.time()
         if self.nsamp < 10000:
             self.Gx,self.sigmaG = self.krigobj.predict(self.init_samp, ['pred','s'])
@@ -99,6 +102,7 @@ class AKMCS:
 
         # Update samples automatically
         while autoupdate:
+            labeladded = False
             for i in range(self.maxupdate):
                 # Evaluate new samples and append into Kriging object information
                 t = time.time()
@@ -159,12 +163,32 @@ class AKMCS:
                         totaldata = temparray[:]
                     else:
                         totaldata = np.vstack((totaldata,temparray))
+                    filename = '../innout/' + savedatato
+                    np.savetxt(filename, totaldata, delimiter=',', header='iter,Pf,stopcrit,time(s)')
                 else:
                     pass
 
-                if savedatato is not None:
-                    filename = '../innout/' + savedatato
-                    np.savetxt(filename, totaldata, delimiter=',', header='iter,Pf,stopcrit,time(s)')
+                if saveimageto is not None:
+                    imagefile = saveimageto + str(i) + ".PNG"
+                    title = "Pf = " + str(self.Pf)
+                    plt.figure(0, figsize=[10, 9])
+                    if not labeladded:
+                        plt.scatter(plotdatapos[:, 0], plotdatapos[:, 1], c='yellow', label='Feasible')
+                        plt.scatter(plotdataneg[:, 0], plotdataneg[:, 1], c='cyan', label='Infeasible')
+                        plt.scatter(krig_initsamp[:, 0], krig_initsamp[:, 1], c='red', label='Initial Kriging Population')
+                        plt.scatter(self.updateX[:, 0], self.updateX[:, 1], s=75, c='black', marker='x', label='Update')
+                        labeladded = True
+                    else:
+                        plt.scatter(plotdatapos[:, 0], plotdatapos[:, 1], c='yellow')
+                        plt.scatter(plotdataneg[:, 0], plotdataneg[:, 1], c='cyan')
+                        plt.scatter(krig_initsamp[:, 0], krig_initsamp[:, 1], c='red')
+                        plt.scatter(self.updateX[:, 0], self.updateX[:, 1], s=75, c='black', marker='x')
+                    plt.xlabel('X1', fontsize=18)
+                    plt.ylabel('X2', fontsize=18)
+                    plt.tick_params(axis='both', which='both', labelsize=16)
+                    plt.legend(loc=1, prop={'size': 15})
+                    plt.title(title,fontdict={'fontsize':20})
+                    plt.savefig(imagefile, format='png')
                 else:
                     pass
 

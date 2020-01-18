@@ -85,7 +85,7 @@ if __name__ == '__main__':
     # angle = sweep_diff(args.le_sweep, args.root_chord, args.semi_area)
     #
     # violated = min_angle_violated(args.min_angle, angle)
-    dat = np.loadtxt('../../Timnextsamp.csv', skiprows=1, delimiter=',')
+    dat = np.loadtxt('../../innout/Timnext5.csv', skiprows=1, delimiter=',')
     tip_angle = sweep_diff(dat[:, 2], dat[:, 4], 0.00165529)
     stat = min_angle_violated(tip_angle,7)
     print(stat)

@@ -4,7 +4,7 @@ from surrogate_models.supports.likelihood_func import likelihood
 from surrogate_models.supports.prediction import prediction
 from copy import deepcopy
 
-def loocv2(KrigInfo,errtype="rmse",drmmodel=None):
+def loocv2(KrigInfo,errtype="rmse"):
     # Take required info from KrigInfo
 
     nsamp = KrigInfo["nsamp"]

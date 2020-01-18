@@ -8,6 +8,7 @@ from surrogate_models.supports.krigloocv import loocv
 from surrogate_models.supports.krigloocv2 import loocv2
 from surrogate_models.supports.likelihood_func import likelihood
 from surrogate_models.supports.prediction import prediction
+from optim_tools.ga.uncGA import uncGA
 import cma
 import logging
 
@@ -210,13 +211,17 @@ class Kriging:
 
         # Optimize hyperparam if number of hyperparameter is 1 using golden section method
         if self.nbhyp == 1:
-            res = minimize_scalar(likelihood, bounds=(self.lb, self.ub), method='golden', args=(self.KrigInfo,'default',
-                                                                                                self.trainvar) )
-            if self.KrigInfo["kernel"] == ["iso_gaussian"]:
-                best_x = res.x
+            if self.KrigInfo["optimizer"] != "ga":
+                res = minimize_scalar(likelihood, bounds=(self.lb, self.ub), method='golden', args=(self.KrigInfo,'default',
+                                                                                                    self.trainvar) )
+                if self.KrigInfo["kernel"] == ["iso_gaussian"]:
+                    best_x = res.x
+                else:
+                    best_x = np.array([res.x])
+                neglnlikecand = likelihood(best_x, self.KrigInfo, trainvar=self.trainvar)
             else:
-                best_x = np.array([res.x])
-            neglnlikecand = likelihood(best_x, self.KrigInfo, trainvar=self.trainvar)
+                best_x, neglnlikecand,_ = uncGA(likelihood, lb=self.lb, ub=self.ub, npop=100, maxg=100,
+                                              args=(self.KrigInfo,'default',self.trainvar))
             if disp:
                 print(f"Best hyperparameter is {best_x}")
                 print(f"With NegLnLikelihood of {neglnlikecand}")
@@ -251,7 +256,8 @@ class Kriging:
                 print(f"With NegLnLikelihood of {neglnlikecand[I]}")
 
             # Calculate Kriging model based on the best hyperparam.
-            self.KrigInfo = likelihood(best_x,self.KrigInfo,mode='all',trainvar=self.trainvar)
+
+        self.KrigInfo = likelihood(best_x,self.KrigInfo,mode='all',trainvar=self.trainvar)
 
     def loocvcalc(self, metrictype='mape',drm=None):
         """
@@ -285,7 +291,7 @@ class Kriging:
         """
 
         # self.KrigInfo["LOOCVerror"],self.KrigInfo["LOOCVpred"] = loocv(self.KrigInfo, errtype=metrictype)
-        self.KrigInfo["LOOCVerror"], self.KrigInfo["LOOCVpred"] = loocv2(self.KrigInfo, errtype=metrictype,drmmodel=drm)
+        self.KrigInfo["LOOCVerror"], self.KrigInfo["LOOCVpred"] = loocv2(self.KrigInfo, errtype=metrictype)
         return (self.KrigInfo["LOOCVerror"],self.KrigInfo["LOOCVpred"])
 
     def predict(self,x,predtypes=['pred'],drmmodel=None):
@@ -477,7 +483,7 @@ def kriginfocheck(KrigInfo, lb, ub, nbhyp):
         KrigInfo['optimizer'] = 'lbfgsb'
         print('The optimizer is not specified, set to lbfgsb')
     else:
-        availoptmzr = ["lbfgsb", "cmaes", "cobyla", "slsqp"]  # check if the specified optimizer is available
+        availoptmzr = ["lbfgsb", "cmaes", "cobyla", "slsqp","ga"]  # check if the specified optimizer is available
         if KrigInfo['optimizer'].lower() not in availoptmzr:
             raise ValueError(KrigInfo["optimizer"], " is not a valid optimizer.")
 

@@ -6,6 +6,7 @@ from copy import deepcopy
 from surrogate_models.kriging_model import Kriging
 from surrogate_models.supports.initinfo import initkriginfo
 from misc.constfunc import sweepdiffcheck
+from misc.constfunc import constraints_check
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -13,9 +14,11 @@ from matplotlib import pyplot as plt
 class Hispeedplane(Problem):
 
     def __init__(self):
-        super(Hispeedplane, self).__init__(6, 2, 2)
+        super(Hispeedplane, self).__init__(11, 2, 2)
         self.types[:] = [Real(5.04167e-02, 9.9583e-02), Real(-4.425e-03, 4.425e-03), Real(-6.3833e+01,7.3833e+01),
-                         Real(-1.475e+01,1.475e+01), Real(4.29167e-02,1.094167e-01), Real(2.067e-02,9.933e-02)]
+                         Real(-2.9864e+01,2.905e+01), Real(3.0181e-02,1.094167e-01), Real(2.067e-02,9.982e-02),
+                         Real(1.0113122e-02,4.382353e-02), Real(2.1201357e-02,1.0988e-01),Real(-6.468326e+01,7.3833e+01),
+                         Real(-4.35746e+01,4.15385e+01), Real(2.066667e-02,9.934e-02)]
         self.constraints[:] = ">=0.15"
         self.krigconst = object
         self.krigobj1 = object
@@ -23,11 +26,12 @@ class Hispeedplane(Problem):
         self.createkrig()
 
     def createkrig(self):
-        df = pd.read_csv('../innout/opt_data.csv', sep=',', index_col='Name')
+        df = pd.read_csv('../innout/tim/opt_data_ASAT1.csv', sep=',', index_col='code')
         data = df.values
-        X = data[:, 0:6].astype(float)
-        y = data[:, 7:9].astype(float)
-        cldat = data[:, 6].astype(float)
+        X = data[:, 0:11].astype(float)
+        y = data[:, 14:16].astype(float)
+        cldat = data[:, 13].astype(float)
+        area_2 = data[:, 11].astype(float)
 
         # define variables
         lb = np.min(X, axis=0)
@@ -50,29 +54,40 @@ class Hispeedplane(Problem):
         KrigMultiInfo1["nrestart"] = 7
         KrigMultiInfo1["ub"] = ub
         KrigMultiInfo1["lb"] = lb
-        KrigMultiInfo1["optimizer"] = "slsqp"
+        KrigMultiInfo1["optimizer"] = "lbfgsb"
 
         KrigMultiInfo2 = deepcopy(KrigMultiInfo1)
         KrigMultiInfo2['y'] = y[:, 1].reshape(-1, 1)
 
         self.krigobj1 = Kriging(KrigMultiInfo1, standardization=True, standtype='default', normy=False, trainvar=False)
         self.krigobj1.train(parallel=False)
-        loocverr1, _ = self.krigobj1.loocvcalc()
+        loocverrCD, _ = self.krigobj1.loocvcalc()
 
         self.krigobj2 = Kriging(KrigMultiInfo2, standardization=True, standtype='default', normy=False, trainvar=False)
         self.krigobj2.train(parallel=False)
-        loocverr2, _ = self.krigobj2.loocvcalc()
+        loocverrNOISE, _ = self.krigobj2.loocvcalc()
 
         self.krigconst = Kriging(KrigConstInfo, standardization=True, standtype='default', normy=False, trainvar=False)
         self.krigconst.train(parallel=False)
-        loocverr3, _ = self.krigconst.loocvcalc()
+        loocverrCL, _ = self.krigconst.loocvcalc()
+
+        print('LOOCV CD: ', loocverrCD)
+        print('LOOCV Noise: ', loocverrNOISE)
+        print('LOOCV CL: ', loocverrCL)
 
     def geomconst(self,vars):
         # This constraint function should return 1 if the constraint is satisfied and 0 if not.
         vars = np.array(vars)
-        tip_angle = sweepdiffcheck.sweep_diff(vars[2], vars[4], 0.00165529)
-        stat = sweepdiffcheck.min_angle_violated(tip_angle, 7)
-        return stat  # return 1 or 0, 1 is larger than 0.15 then the constraint is satisfied
+        proj_area_1, area_1, proj_area_2, area_2 = constraints_check.calc_areas(vars[6], vars[4], vars[3], vars[7],
+                                                                                vars[9],
+                                                                                total_proj_area=0.00165529)
+        s1_min = 0.3 * 0.00165529
+        s1_max = 0.9 * 0.00165529
+        s1_satisfied = constraints_check.min_max_satisfied(proj_area_1, min_val=s1_min, max_val=s1_max, disp=False)
+        tip_angle = constraints_check.triangular_tip_angle(vars[8], vars[7], area_2)
+        tip_satisfied = constraints_check.min_max_satisfied(tip_angle, 7, disp=False)
+        stat = s1_satisfied & tip_satisfied
+        return stat
 
     def evaluate(self, solution):
         vars = np.array(solution.variables)
@@ -83,14 +98,15 @@ class Hispeedplane(Problem):
 if __name__ == '__main__':
     prob1 = Hispeedplane()
     algorithm = NSGAII(prob1)
-    algorithm.run(1000)
+    algorithm.run(5000)
 
     nondominated_solutions = nondominated(algorithm.result)
 
-    df = pd.read_csv('../innout/opt_data.csv', sep=',', index_col='Name')
+    df = pd.read_csv('../innout/tim/opt_data_ASAT1.csv', sep=',', index_col='code')
     data = df.values
-    X = data[:, 0:6].astype(float)
-    y = data[:, 7:9].astype(float)
+    X = data[:, 0:11].astype(float)
+    y = data[:, 14:16].astype(float)
+    cldat = data[:, 13].astype(float)
 
     nondom1 = np.array([s.objectives[0] for s in nondominated_solutions]).reshape(-1, 1)
     nondom2 = np.array([s.objectives[1] for s in nondominated_solutions]).reshape(-1, 1)
@@ -99,12 +115,17 @@ if __name__ == '__main__':
     var = np.array(var)
     nondom = np.hstack((nondom1, nondom2))
     predCL = prob1.krigconst.predict(var, 'pred')
-    total = np.hstack((var, predCL))
-    total = np.hstack((total, nondom))
-    np.savetxt("../innout/Timnsga2next.csv", total, delimiter=",", header="x,z,le_sweep,dihedral,root_chord,root_tc,CL,"
-                                                                         "CD,dB(A)", comments="")
-    plt.scatter(y[:, 0], y[:, 1], label='initial samples')
-    plt.scatter(nondom1, nondom2, label='nondom soln')
+    _, _, _, area_2pred = constraints_check.calc_areas(var[:, 6], var[:, 4], var[:, 3], var[:, 7],
+                                                       var[:, 9],
+                                                       total_proj_area=0.00165529)
+    total = np.hstack((var, area_2pred.reshape(-1,1), predCL,nondom))
+    np.savetxt("../innout/tim/Timnsga2next.csv", total, delimiter=",",
+               header="x,z,le_sweep_1,dihedral_1,chord_1,tc_1,proj_span_1,chord_2,le_sweep_2,dihedral_2,tc_2,area_2,"
+                      "CL,CD,dB(A)", comments="")
+
+    plt.scatter(y[cldat > 0.15, 0], y[cldat > 0.15, 1], c='#1f77b4', label='initial feasible samples')
+    plt.scatter(y[cldat <= 0.15, 0], y[cldat <= 0.15, 1], marker='x', c='k', label='initial infeasible samples')
+    plt.scatter(nondom1, nondom2, c='#ff7f0e', label='predicted next samples')
     plt.xlabel("CD")
     plt.ylabel("dB(A)")
     plt.show()

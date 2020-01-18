@@ -87,33 +87,37 @@ class Problem:
         moboInfo["acquifuncopt"] = "ga"
         moboInfo["refpoint"] = np.array([0.06, 83])
         cheapconstlist = [self.geomconst]
-        infeasiblesamp = np.where(self.cldat <= 0.15)[0]
         mobo = MOBO(moboInfo,self.kriglist,autoupdate=False,multiupdate=5,savedata=False,expconst=self.expconst,
                     chpconst=cheapconstlist)
-        xupdate, yupdate, metricall = mobo.run(disp=True,infeasible=infeasiblesamp)
+        xupdate, yupdate, metricall = mobo.run(disp=True)
 
         return xupdate, yupdate, metricall
 
     def geomconst(self,vars):
         # constraint 'geomconst' should have input of the design variables
+        # vars = np.array(vars)
+        # proj_area_1, area_1, proj_area_2, area_2 = constraints_check.calc_areas(vars[6],vars[4],vars[3],vars[7],vars[9],
+        #                                                                         total_proj_area=0.00165529)
+        # s1_min = 0.3 * 0.00165529
+        # s1_max = 0.9 * 0.00165529
+        # s1_satisfied = constraints_check.min_max_satisfied(proj_area_1, min_val=s1_min, max_val=s1_max,disp=False)
+        # tip_angle = constraints_check.triangular_tip_angle(vars[8], vars[7], area_2)
+        # tip_satisfied = constraints_check.min_max_satisfied(tip_angle, 7,disp=False)
+        # stat = s1_satisfied & tip_satisfied
+        # return stat
+
         vars = np.array(vars)
-        proj_area_1, area_1, proj_area_2, area_2 = constraints_check.calc_areas(vars[6],vars[4],vars[3],vars[7],vars[9],
-                                                                                total_proj_area=0.00165529)
-        s1_min = 0.3 * 0.00165529
-        s1_max = 0.9 * 0.00165529
-        s1_satisfied = constraints_check.min_max_satisfied(proj_area_1, min_val=s1_min, max_val=s1_max,disp=False)
-        tip_angle = constraints_check.triangular_tip_angle(vars[8], vars[7], area_2)
-        tip_satisfied = constraints_check.min_max_satisfied(tip_angle, 7,disp=False)
-        stat = s1_satisfied & tip_satisfied
+        tip_angle = sweepdiffcheck.sweep_diff(vars[2], vars[4], 0.00165529)
+        stat = sweepdiffcheck.min_angle_violated(tip_angle, 7)
         return stat
 
 if __name__ == '__main__':
-    df = pd.read_csv('../innout/tim/In/opt_data7_AT.csv', sep=',', index_col='code')
+    df = pd.read_csv('../innout/tim/In/opt_data_AS_old_all4.csv', sep=',', index_col='Name')
     data = df.values
-    X = data[:, 0:11].astype(float)
-    y = data[:, 14:16].astype(float)
-    cldat = data[:, 13].astype(float)
-    area_2 = data[:, 11].astype(float)
+    X = data[:, 0:6].astype(float)
+    y = data[:, 7:9].astype(float)
+    cldat = data[:, 6].astype(float)
+    area_2 = None#data[:, 11].astype(float)
 
     t = time.time()
     optim = Problem(X,y,cldat,area_2)
@@ -121,15 +125,19 @@ if __name__ == '__main__':
     xupdate, yupdate, metricall = optim.update_sample()
     clpred = optim.krigconst.predict(xupdate,['pred'])
     elapsed = time.time() - t
-    _,_,_,area_2pred = constraints_check.calc_areas(xupdate[:,6],xupdate[:,4],xupdate[:,3],xupdate[:,7],xupdate[:,9],
-                                                    total_proj_area=0.00165529)
+    # _,_,_,area_2pred = constraints_check.calc_areas(xupdate[:,6],xupdate[:,4],xupdate[:,3],xupdate[:,7],xupdate[:,9],
+    #                                                 total_proj_area=0.00165529)
     print('Time required:', elapsed)
 
-    cycle = np.array(["opt08_AT"]*5).reshape(-1,1)
-    totalupdate = np.hstack((xupdate,area_2pred.reshape(-1,1),cycle,clpred,yupdate,metricall))
-    np.savetxt("../innout/tim/Out/nextpoints8_AT.csv", totalupdate, delimiter=",",
-               header="x,z,le_sweep_1,dihedral_1,chord_1,tc_1,proj_span_1,chord_2,le_sweep_2,dihedral_2,tc_2,area_2,cycle,"
-                      "CL,CD,dB(A),metric", comments="", fmt="%s")
+    # cycle = np.array(["opt03_AT"]*5).reshape(-1,1)
+    # totalupdate = np.hstack((xupdate,area_2pred.reshape(-1,1),cycle,clpred,yupdate,metricall))
+    # np.savetxt("../innout/tim/Out/nextpoints3_AT_LBF.csv", totalupdate, delimiter=",",
+    #            header="x,z,le_sweep_1,dihedral_1,chord_1,tc_1,proj_span_1,chord_2,le_sweep_2,dihedral_2,tc_2,area_2,cycle,"
+    #                   "CL,CD,dB(A),metric", comments="", fmt="%s")
+
+    totalupdate = np.hstack((xupdate, clpred, yupdate, metricall))
+    np.savetxt("../innout/tim/Out/nextpoints_oldAS_all5.csv", totalupdate, delimiter=",",
+               header="x,z,le_sweep,dihedral,root_chord,root_tc,CL,CD,dB(A),metric", comments="")
 
     plt.scatter(y[cldat > 0.15, 0], y[cldat > 0.15, 1], c='#1f77b4',label='initial feasible samples')
     plt.scatter(y[cldat <= 0.15, 0], y[cldat <= 0.15, 1],marker='x',c='k',label='initial infeasible samples')

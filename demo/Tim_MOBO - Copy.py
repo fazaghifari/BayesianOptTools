@@ -87,10 +87,9 @@ class Problem:
         moboInfo["acquifuncopt"] = "ga"
         moboInfo["refpoint"] = np.array([0.06, 83])
         cheapconstlist = [self.geomconst]
-        infeasiblesamp = np.where(self.cldat <= 0.15)[0]
         mobo = MOBO(moboInfo,self.kriglist,autoupdate=False,multiupdate=5,savedata=False,expconst=self.expconst,
                     chpconst=cheapconstlist)
-        xupdate, yupdate, metricall = mobo.run(disp=True,infeasible=infeasiblesamp)
+        xupdate, yupdate, metricall = mobo.run(disp=True)
 
         return xupdate, yupdate, metricall
 
@@ -108,7 +107,7 @@ class Problem:
         return stat
 
 if __name__ == '__main__':
-    df = pd.read_csv('../innout/tim/In/opt_data7_AT.csv', sep=',', index_col='code')
+    df = pd.read_csv('../innout/tim/In/opt_data7_ASAT.csv', sep=',', index_col='code')
     data = df.values
     X = data[:, 0:11].astype(float)
     y = data[:, 14:16].astype(float)
@@ -125,11 +124,12 @@ if __name__ == '__main__':
                                                     total_proj_area=0.00165529)
     print('Time required:', elapsed)
 
-    cycle = np.array(["opt08_AT"]*5).reshape(-1,1)
+    cycle = np.array(["opt08_ASAT"]*5).reshape(-1,1)
     totalupdate = np.hstack((xupdate,area_2pred.reshape(-1,1),cycle,clpred,yupdate,metricall))
-    np.savetxt("../innout/tim/Out/nextpoints8_AT.csv", totalupdate, delimiter=",",
+    np.savetxt("../innout/tim/Out/nextpoints8_ASAT.csv", totalupdate, delimiter=",",
                header="x,z,le_sweep_1,dihedral_1,chord_1,tc_1,proj_span_1,chord_2,le_sweep_2,dihedral_2,tc_2,area_2,cycle,"
                       "CL,CD,dB(A),metric", comments="", fmt="%s")
+
 
     plt.scatter(y[cldat > 0.15, 0], y[cldat > 0.15, 1], c='#1f77b4',label='initial feasible samples')
     plt.scatter(y[cldat <= 0.15, 0], y[cldat <= 0.15, 1],marker='x',c='k',label='initial infeasible samples')
