@@ -78,14 +78,6 @@ class MOBO:
         else:
             pass
 
-        if self.moboInfo["refpointtype"] == 'static':
-            refpbound1 = np.where(self.yall[:, 0] > self.moboInfo["refpoint"][0])[0]
-            self.yall = np.delete(self.yall.copy(), refpbound1, 0)
-            self.Xall = np.delete(self.Xall.copy(), refpbound1, 0)
-            refpbound2 = np.where(self.yall[:, 1] > self.moboInfo["refpoint"][1])[0]
-            self.yall = np.delete(self.yall.copy(), refpbound2, 0)
-            self.Xall = np.delete(self.Xall.copy(), refpbound2, 0)
-
         self.ypar,_ = searchpareto.paretopoint(self.yall)
 
         print("Begin multi-objective Bayesian optimization process.")
@@ -120,12 +112,14 @@ class MOBO:
         if self.multiupdate == 0 or self.multiupdate == 1:
             xupdate = self.Xall[-self.moboInfo['nup']:, :]
             yupdate = self.yall[-self.moboInfo['nup']:, :]
+            supdate = self.spredall[-self.moboInfo['nup']:, :]
         else:
             xupdate = self.Xall[(-self.moboInfo['nup']*self.multiupdate):, :]
             yupdate = self.yall[(-self.moboInfo['nup']*self.multiupdate):, :]
+            supdate = self.spredall[(-self.moboInfo['nup']*self.multiupdate):, :]
         metricall = self.metricall
 
-        return xupdate,yupdate,metricall
+        return xupdate,yupdate,supdate,metricall
 
 
     def ehviupdate(self, disp):
@@ -138,6 +132,8 @@ class MOBO:
         Returns:
              None
         """
+        self.spredall = deepcopy(self.yall)
+        self.spredall[:] = 0
         while self.nup < self.moboInfo['nup']:
             # Iteratively update the reference point for hypervolume computation if EHVI is used as the acquisition function
             if self.moboInfo['refpointtype'].lower() == 'dynamic':
@@ -150,10 +146,11 @@ class MOBO:
                 xnext, metricnext = run_multi_opt(self.kriglist, self.moboInfo, self.ypar, self.krigconstlist,
                                                   self.cheapconstlist)
                 yprednext = np.zeros(shape=[2])
+                sprednext = np.zeros(shape=[2])
                 for ii,krigobj in enumerate(self.kriglist):
-                    yprednext[ii] = krigobj.predict(xnext,['pred'])
+                    yprednext[ii], sprednext[ii] = krigobj.predict(xnext,['pred','s'])
             else:
-                xnext, yprednext, metricnext = self.simultpredehvi(disp)
+                xnext, yprednext, sprednext, metricnext = self.simultpredehvi(disp)
 
             if self.nup == 0:
                 self.metricall = metricnext
@@ -164,6 +161,7 @@ class MOBO:
             if self.autoupdate is False:
                 self.Xall = np.vstack((self.Xall, xnext))
                 self.yall = np.vstack((self.yall, yprednext))
+                self.spredall = np.vstack((self.spredall, sprednext))
                 break
             else:
                 pass
@@ -241,6 +239,7 @@ class MOBO:
         for index,obj in enumerate(self.kriglist):
             krigtemp[index] = deepcopy(obj)
         yprednext = np.zeros(shape=[len(krigtemp)])
+        sprednext = np.zeros(shape=[len(krigtemp)])
         ypartemp = self.ypar
         yall = self.yall
 
@@ -257,7 +256,7 @@ class MOBO:
                                np.ones(shape=[1, krigtemp[0].KrigInfo["nvar"]])))
 
             for jj in range(len(krigtemp)):
-                yprednext[jj] = krigtemp[jj].predict(xnext,'pred')
+                yprednext[jj], sprednext[jj] = krigtemp[jj].predict(xnext,['pred','s'])
                 krigtemp[jj].KrigInfo['X'] = np.vstack((krigtemp[jj].KrigInfo['X'], xnext))
                 krigtemp[jj].KrigInfo['y'] = np.vstack((krigtemp[jj].KrigInfo['y'], yprednext[jj]))
                 krigtemp[jj].standardize()
@@ -270,10 +269,12 @@ class MOBO:
             if ii == 0:
                 xalltemp = deepcopy(xnext)
                 yalltemp = deepcopy(yprednext)
+                salltemp = deepcopy(sprednext)
                 metricall = deepcopy(metrictemp)
             else:
                 xalltemp = np.vstack((xalltemp,xnext))
                 yalltemp = np.vstack((yalltemp,yprednext))
+                salltemp = np.vstack((salltemp,sprednext))
                 metricall = np.vstack((metricall,metrictemp))
 
             yall = np.vstack((yall,yprednext))
@@ -282,7 +283,7 @@ class MOBO:
             if disp:
                 print("time: ",time.time()-t1," s")
 
-        return xalltemp,yalltemp,metricall
+        return [xalltemp,yalltemp,salltemp,metricall]
 
 
     def simultpredparego(self):

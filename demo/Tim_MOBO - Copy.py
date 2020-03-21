@@ -47,7 +47,7 @@ class Problem:
         KrigMultiInfo1 = initkriginfo("single")
         KrigMultiInfo1["X"] = self.X
         KrigMultiInfo1["y"] = self.y[:, 0].reshape(-1, 1)
-        KrigMultiInfo1["nrestart"] = 7
+        KrigMultiInfo1["nrestart"] = 5
         KrigMultiInfo1["ub"] = ub
         KrigMultiInfo1["lb"] = lb
         KrigMultiInfo1["optimizer"] = "lbfgsb"
@@ -87,11 +87,12 @@ class Problem:
         moboInfo["acquifuncopt"] = "ga"
         moboInfo["refpoint"] = np.array([0.06, 83])
         cheapconstlist = [self.geomconst]
+        infeasiblesamp = np.where(self.cldat <= 0.15)[0]
         mobo = MOBO(moboInfo,self.kriglist,autoupdate=False,multiupdate=5,savedata=False,expconst=self.expconst,
                     chpconst=cheapconstlist)
-        xupdate, yupdate, metricall = mobo.run(disp=True)
+        xupdate, yupdate, supdate, metricall  = mobo.run(disp=True,infeasible=infeasiblesamp)
 
-        return xupdate, yupdate, metricall
+        return xupdate, yupdate, supdate, metricall
 
     def geomconst(self,vars):
         # constraint 'geomconst' should have input of the design variables
@@ -107,7 +108,7 @@ class Problem:
         return stat
 
 if __name__ == '__main__':
-    df = pd.read_csv('../innout/tim/In/opt_data7_ASAT.csv', sep=',', index_col='code')
+    df = pd.read_csv('../innout/tim/In/opt_data14_ASAT_mod.csv', sep=',', index_col='code')
     data = df.values
     X = data[:, 0:11].astype(float)
     y = data[:, 14:16].astype(float)
@@ -117,23 +118,25 @@ if __name__ == '__main__':
     t = time.time()
     optim = Problem(X,y,cldat,area_2)
     optim.createkrig()
-    xupdate, yupdate, metricall = optim.update_sample()
+    xupdate, yupdate, supdate, metricall  = optim.update_sample()
     clpred = optim.krigconst.predict(xupdate,['pred'])
     elapsed = time.time() - t
     _,_,_,area_2pred = constraints_check.calc_areas(xupdate[:,6],xupdate[:,4],xupdate[:,3],xupdate[:,7],xupdate[:,9],
                                                     total_proj_area=0.00165529)
     print('Time required:', elapsed)
 
-    cycle = np.array(["opt08_ASAT"]*5).reshape(-1,1)
-    totalupdate = np.hstack((xupdate,area_2pred.reshape(-1,1),cycle,clpred,yupdate,metricall))
-    np.savetxt("../innout/tim/Out/nextpoints8_ASAT.csv", totalupdate, delimiter=",",
+    cycle = np.array(["opt15_ASAT_total"]*5).reshape(-1,1)
+    totalupdate = np.hstack((xupdate,area_2pred.reshape(-1,1),cycle,clpred,yupdate,metricall,supdate))
+    np.savetxt("../innout/tim/Out/nextpoints15_ASAT.csv", totalupdate, delimiter=",",
                header="x,z,le_sweep_1,dihedral_1,chord_1,tc_1,proj_span_1,chord_2,le_sweep_2,dihedral_2,tc_2,area_2,cycle,"
-                      "CL,CD,dB(A),metric", comments="", fmt="%s")
+                      "CL,CD,dB(A),metric,CDs,dBs", comments="", fmt="%s")
 
 
     plt.scatter(y[cldat > 0.15, 0], y[cldat > 0.15, 1], c='#1f77b4',label='initial feasible samples')
     plt.scatter(y[cldat <= 0.15, 0], y[cldat <= 0.15, 1],marker='x',c='k',label='initial infeasible samples')
     plt.scatter(yupdate[:, 0], yupdate[:, 1], c='#ff7f0e',label='predicted next samples')
+    plt.errorbar(yupdate[:, 0], yupdate[:, 1], xerr=supdate[:, 0], fmt='o', color='orange')
+    plt.errorbar(yupdate[:, 0], yupdate[:, 1], yerr=supdate[:, 1], fmt='o', color='orange')
     plt.ylabel('dB(A)')
     plt.xlabel('CD')
     plt.legend()

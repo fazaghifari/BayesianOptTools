@@ -56,9 +56,7 @@ def realval(lb,ub,samp):
             realsamp[j, i] = (samp[j, i] * (ub[i] - lb[i])) + lb[i]
     return realsamp
 
-def standardize(X,y,**kwargs):
-    type = kwargs.get('type', "default")
-    norm_y = kwargs.get('normy',False)
+def standardize(X,y=None,type='default',norm_y=False,**kwargs):
     ranges = kwargs.get('range', np.array([None]))
 
     if type.lower()=='default':

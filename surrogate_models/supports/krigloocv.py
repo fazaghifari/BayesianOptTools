@@ -27,7 +27,7 @@ def loocv(KrigInfo,errtype="rmse",num=None):
         LOOCVpred[i] = 0
         for j in range(0,nsamp):
             LOOCVpred[i] = LOOCVpred[i] + np.dot((B[i,j]/B[i,i]),y[j,0])
-        LOOCVpred[i] = LOOCVpred[i] + y[i,0]
+        LOOCVpred[i] = -LOOCVpred[i] + y[i,0]
 
     LOOCVpred = LOOCVpred.reshape(-1,1)
     LOOCVerr = errperf(y,LOOCVpred,errtype)

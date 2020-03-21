@@ -13,16 +13,18 @@ import pandas as pd
 
 class Problem:
 
-    def __init__(self, X, y, cldat,area_2):
+    def __init__(self, X, y, cldat,area_2,limit):
         self.X = X
         self.y = y
         self.cldat = cldat
         self.area2 = area_2
+        self.ub = limit[0, :]
+        self.lb = limit[1, :]
 
     def createkrig(self):
         # define variables
-        lb = np.min(self.X, axis=0)
-        ub = np.max(self.X, axis=0)
+        lb = self.lb
+        ub = self.ub
 
         # Set Const Kriging
         KrigConstInfo = initkriginfo("single")
@@ -87,11 +89,12 @@ class Problem:
         moboInfo["acquifuncopt"] = "ga"
         moboInfo["refpoint"] = np.array([0.06, 83])
         cheapconstlist = [self.geomconst]
+        infeasiblesamp = np.where(self.cldat <= 0.15)[0]
         mobo = MOBO(moboInfo,self.kriglist,autoupdate=False,multiupdate=5,savedata=False,expconst=self.expconst,
                     chpconst=cheapconstlist)
-        xupdate, yupdate, metricall = mobo.run(disp=True)
+        xupdate, yupdate, supdate, metricall = mobo.run(disp=True,infeasible=infeasiblesamp)
 
-        return xupdate, yupdate, metricall
+        return xupdate, yupdate, supdate, metricall
 
     def geomconst(self,vars):
         # constraint 'geomconst' should have input of the design variables
@@ -107,22 +110,26 @@ class Problem:
         # return stat
 
         vars = np.array(vars)
+        lbconst = np.prod(vars >= self.lb)
+        ubconst = np.prod(vars <= self.ub)
         tip_angle = sweepdiffcheck.sweep_diff(vars[2], vars[4], 0.00165529)
         stat = sweepdiffcheck.min_angle_violated(tip_angle, 7)
+        stat = stat * lbconst * ubconst
         return stat
 
 if __name__ == '__main__':
-    df = pd.read_csv('../innout/tim/In/opt_data_AS_old_11.csv', sep=',', index_col='Name')
+    df = pd.read_csv('../innout/tim/In/opt_data_AS_old_16mod.csv', sep=',', index_col='Name')
     data = df.values
     X = data[:, 0:6].astype(float)
     y = data[:, 7:9].astype(float)
     cldat = data[:, 6].astype(float)
     area_2 = None#data[:, 11].astype(float)
+    lim = np.loadtxt('../innout/tim/In/constold.csv', delimiter=',')
 
     t = time.time()
-    optim = Problem(X,y,cldat,area_2)
+    optim = Problem(X,y,cldat,area_2,lim)
     optim.createkrig()
-    xupdate, yupdate, metricall = optim.update_sample()
+    xupdate, yupdate, supdate, metricall = optim.update_sample()
     clpred = optim.krigconst.predict(xupdate,['pred'])
     elapsed = time.time() - t
     # _,_,_,area_2pred = constraints_check.calc_areas(xupdate[:,6],xupdate[:,4],xupdate[:,3],xupdate[:,7],xupdate[:,9],
@@ -135,13 +142,15 @@ if __name__ == '__main__':
     #            header="x,z,le_sweep_1,dihedral_1,chord_1,tc_1,proj_span_1,chord_2,le_sweep_2,dihedral_2,tc_2,area_2,cycle,"
     #                   "CL,CD,dB(A),metric", comments="", fmt="%s")
 
-    totalupdate = np.hstack((xupdate, clpred, yupdate, metricall))
-    np.savetxt("../innout/tim/Out/nextpoints_oldAS_12.csv", totalupdate, delimiter=",",
-               header="x,z,le_sweep,dihedral,root_chord,root_tc,CL,CD,dB(A),metric", comments="")
+    totalupdate = np.hstack((xupdate, clpred, yupdate, metricall, supdate))
+    np.savetxt("../innout/tim/Out/nextpoints_oldAS_17.csv", totalupdate, delimiter=",",
+               header="x,z,le_sweep,dihedral,root_chord,root_tc,CL,CD,dB(A),metric,CDs,dBs", comments="")
 
     plt.scatter(y[cldat > 0.15, 0], y[cldat > 0.15, 1], c='#1f77b4',label='initial feasible samples')
     plt.scatter(y[cldat <= 0.15, 0], y[cldat <= 0.15, 1],marker='x',c='k',label='initial infeasible samples')
     plt.scatter(yupdate[:, 0], yupdate[:, 1], c='#ff7f0e',label='predicted next samples')
+    plt.errorbar(yupdate[:, 0], yupdate[:, 1], xerr=supdate[:,0], fmt='o', color='orange')
+    plt.errorbar(yupdate[:, 0], yupdate[:, 1], yerr=supdate[:,1], fmt='o', color='orange')
     plt.ylabel('dB(A)')
     plt.xlabel('CD')
     plt.legend()

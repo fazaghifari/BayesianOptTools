@@ -96,6 +96,10 @@ def errperf (T,P,type='rmse'):
     elif type == 'rmspe': #Root mean squared PE
         Vmspe = errperf(T,P,'mspe')
         V = np.sqrt(Vmspe)
+    elif type == 'r2': #R2 criterion
+        SStot = np.sum((T-np.mean(T))**2)
+        SSres = np.sum((T-P)**2)
+        V = 1 - (SSres/SStot)
     else:
         raise Exception("Type is invalid")
 

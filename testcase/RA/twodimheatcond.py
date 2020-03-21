@@ -251,7 +251,7 @@ def kernel(XN, XM, nvar, theta):
     return Psi
 
 if __name__ == "__main__":
-    case = 0
+    case = 1
     if case == 1:
         test = Conduction()
         gridx, gridy = test.creategrid(100, 100, view=False)

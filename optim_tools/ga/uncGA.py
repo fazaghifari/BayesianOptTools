@@ -1,11 +1,11 @@
 from copy import deepcopy
 import numpy as np
 from numpy.random import random_sample
-from misc.sampling import haltonsampling
+from misc.sampling import haltonsampling,sobol_new
 from optim_tools.ga import SBX, mutation
 
 
-def uncGA (fitnessfcn, lb, ub, opt='min',disp=False,npop=250,maxg=400,args=None):
+def uncGA (fitnessfcn, lb, ub, opt='min',disp=False,npop=300,maxg=200,args=None,initialization=None):
     # only required for multi-objective fcn
     if isinstance(ub, int) or isinstance(ub, float):
         nvar = 1
@@ -19,7 +19,23 @@ def uncGA (fitnessfcn, lb, ub, opt='min',disp=False,npop=250,maxg=400,args=None)
 
 
     #Initialize population
-    samplenorm = haltonsampling.halton(nvar, npop)
+    # samplenorm = haltonsampling.halton(nvar, npop)
+    if initialization is None:
+        samplenorm = sobol_new.sobol_points(npop, nvar)
+    else:
+        if initialization.ndim == 1:
+            samplenorm = np.random.normal(initialization,.08,(npop,nvar))
+        else:
+            n_init = np.size(initialization,0)
+            nbatch = int(npop/n_init)
+            samplenorm = np.zeros((npop,nvar))
+            for ij in range(n_init-1):
+                samplenorm[ij*nbatch:(ij+1)*nbatch, :] = np.random.normal(initialization[ij,:],.075,(nbatch,nvar))
+            samplenorm[(ij+1)*nbatch:, :] = np.random.normal(initialization[(ij+1), :], .075,
+                                                             (np.size(samplenorm[(ij+1)*nbatch:, :],0), nvar))
+            samplenorm[samplenorm < 0] = 0
+            samplenorm[samplenorm > 1] = 1
+
     population = np.zeros(shape=[npop,nvar+1])
     for i in range(0, npop):
         for j in range(0, nvar):

@@ -283,6 +283,7 @@ class Kriging:
                     - 'spe' : Squared percentage error
                     - 'mspe' : Mean squared percentage error
                     - 'rmspe' : Root mean squared percentage error
+                    - 'r2' : R2 criterion
 
         Returns:
             LOOCVerror : Value of chosen error metric.

@@ -15,18 +15,21 @@ class Hispeedplane(Problem):
 
     def __init__(self):
         super(Hispeedplane, self).__init__(11, 2, 2)
-        self.types[:] = [Real(5.04167e-02, 9.9583e-02), Real(-4.425e-03, 4.425e-03), Real(-6.3833e+01,7.3833e+01),
-                         Real(-2.9864e+01,2.905e+01), Real(3.0181e-02,1.094167e-01), Real(2.067e-02,9.982e-02),
-                         Real(1.0113122e-02,4.382353e-02), Real(2.1201357e-02,1.0988e-01),Real(-6.468326e+01,7.3833e+01),
-                         Real(-4.35746e+01,4.15385e+01), Real(2.066667e-02,9.934e-02)]
+        self.types[:] = [Real(5.0e-02, 1.0e-01), Real(-4.5e-03, 4.5e-03), Real(-6.5e+01,7.5e+01),
+                         Real(-3.0e+01,3.0e+01), Real(3.0e-02,1.1e-01), Real(2.0e-02,1.0e-01),
+                         Real(1.0e-02,6.0e-02), Real(3.0e-02,1.1e-01),Real(-6.5e+01,7.5e+01),
+                         Real(-4.5e+01,4.5e+01), Real(2.0e-02,1.0e-01)]
         self.constraints[:] = ">=0.15"
         self.krigconst = object
         self.krigobj1 = object
         self.krigobj2 = object
+        lim = np.loadtxt('../innout/tim/In/const.csv', delimiter=',')
+        self.ub = lim[0, :]
+        self.lb = lim[1, :]
         self.createkrig()
 
     def createkrig(self):
-        df = pd.read_csv('../innout/tim/opt_data_ASAT1.csv', sep=',', index_col='code')
+        df = pd.read_csv('../innout/tim/In/opt_data7_AT.csv', sep=',', index_col='code')
         data = df.values
         X = data[:, 0:11].astype(float)
         y = data[:, 14:16].astype(float)
@@ -34,8 +37,8 @@ class Hispeedplane(Problem):
         area_2 = data[:, 11].astype(float)
 
         # define variables
-        lb = np.min(X, axis=0)
-        ub = np.max(X, axis=0)
+        lb = self.lb
+        ub = self.ub
 
         # Set Const Kriging
         KrigConstInfo = initkriginfo("single")
@@ -78,6 +81,8 @@ class Hispeedplane(Problem):
     def geomconst(self,vars):
         # This constraint function should return 1 if the constraint is satisfied and 0 if not.
         vars = np.array(vars)
+        lbconst = np.prod(vars >= self.lb)
+        ubconst = np.prod(vars <= self.ub)
         proj_area_1, area_1, proj_area_2, area_2 = constraints_check.calc_areas(vars[6], vars[4], vars[3], vars[7],
                                                                                 vars[9],
                                                                                 total_proj_area=0.00165529)
@@ -87,6 +92,7 @@ class Hispeedplane(Problem):
         tip_angle = constraints_check.triangular_tip_angle(vars[8], vars[7], area_2)
         tip_satisfied = constraints_check.min_max_satisfied(tip_angle, 7, disp=False)
         stat = s1_satisfied & tip_satisfied
+        stat = stat * lbconst * ubconst
         return stat
 
     def evaluate(self, solution):
@@ -98,11 +104,11 @@ class Hispeedplane(Problem):
 if __name__ == '__main__':
     prob1 = Hispeedplane()
     algorithm = NSGAII(prob1)
-    algorithm.run(5000)
+    algorithm.run(10000)
 
     nondominated_solutions = nondominated(algorithm.result)
 
-    df = pd.read_csv('../innout/tim/opt_data_ASAT1.csv', sep=',', index_col='code')
+    df = pd.read_csv('../innout/tim/In/opt_data8_AT.csv', sep=',', index_col='code')
     data = df.values
     X = data[:, 0:11].astype(float)
     y = data[:, 14:16].astype(float)
@@ -119,7 +125,7 @@ if __name__ == '__main__':
                                                        var[:, 9],
                                                        total_proj_area=0.00165529)
     total = np.hstack((var, area_2pred.reshape(-1,1), predCL,nondom))
-    np.savetxt("../innout/tim/Timnsga2next.csv", total, delimiter=",",
+    np.savetxt("../innout/tim/Out/Timnsga2next2.csv", total, delimiter=",",
                header="x,z,le_sweep_1,dihedral_1,chord_1,tc_1,proj_span_1,chord_2,le_sweep_2,dihedral_2,tc_2,area_2,"
                       "CL,CD,dB(A)", comments="")
 

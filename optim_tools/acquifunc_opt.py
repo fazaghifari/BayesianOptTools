@@ -156,8 +156,15 @@ def run_multi_opt(kriglist, moboInfo, ypar, krigconstlist=None, cheapconstlist=N
             xnext, fnext,_ = uncGA(acqufunhandle,lb=kriglist[0].KrigInfo["lb"],ub=kriglist[0].KrigInfo["ub"],
                                            args=(ypar,moboInfo,kriglist))
         else:
+            templst = []
+            for ij in range(np.size(ypar,0)):
+                idx = np.where((kriglist[0].KrigInfo["y"] == ypar[ij, 0]) & (kriglist[1].KrigInfo["y"] == ypar[ij, 1]))[0][0]
+                templst.append(idx)
+
+            init_seed = kriglist[0].KrigInfo["X_norm"][templst,:]/2 + 0.5
             xnext, fnext, _ = uncGA(multiconstfun, lb=kriglist[0].KrigInfo["lb"], ub=kriglist[0].KrigInfo["ub"],
-                                    args=(ypar, kriglist, moboInfo, krigconstlist, cheapconstlist))
+                                    args=(ypar, kriglist, moboInfo, krigconstlist, cheapconstlist),
+                                    initialization=init_seed)
 
     elif acquifuncopt.lower() == 'lbfgsb':
         Xrand = realval(kriglist[0].KrigInfo["lb"], kriglist[0].KrigInfo["ub"],

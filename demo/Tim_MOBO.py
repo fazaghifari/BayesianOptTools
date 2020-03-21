@@ -9,20 +9,23 @@ import time
 from matplotlib import pyplot as plt
 from misc.constfunc import sweepdiffcheck
 from misc.constfunc import constraints_check
+from misc.sampling import haltonsampling,sobol_new
 import pandas as pd
 
 class Problem:
 
-    def __init__(self, X, y, cldat,area_2):
+    def __init__(self, X, y, cldat,area_2,limit):
         self.X = X
         self.y = y
         self.cldat = cldat
         self.area2 = area_2
+        self.ub = limit[0,:]
+        self.lb = limit[1, :]
 
     def createkrig(self):
         # define variables
-        lb = np.min(self.X, axis=0)
-        ub = np.max(self.X, axis=0)
+        lb = self.lb
+        ub = self.ub
 
         # Set Const Kriging
         KrigConstInfo = initkriginfo("single")
@@ -90,13 +93,21 @@ class Problem:
         infeasiblesamp = np.where(self.cldat <= 0.15)[0]
         mobo = MOBO(moboInfo,self.kriglist,autoupdate=False,multiupdate=5,savedata=False,expconst=self.expconst,
                     chpconst=cheapconstlist)
-        xupdate, yupdate, metricall = mobo.run(disp=True,infeasible=infeasiblesamp)
+        xupdate, yupdate, supdate, metricall = mobo.run(disp=True,infeasible=infeasiblesamp)
 
-        return xupdate, yupdate, metricall
+        return xupdate, yupdate, supdate, metricall
+
+    # def refconst(self,vars):
+    #     con1 = self.krigobj1.predict(vars) < 0.03
+    #     con2 = self.krigobj2.predict(vars) < 75
+    #     stat = con1 & con2
+    #     return stat
 
     def geomconst(self,vars):
         # constraint 'geomconst' should have input of the design variables
         vars = np.array(vars)
+        lbconst = np.prod(vars >= self.lb)
+        ubconst = np.prod(vars <= self.ub)
         proj_area_1, area_1, proj_area_2, area_2 = constraints_check.calc_areas(vars[6],vars[4],vars[3],vars[7],vars[9],
                                                                                 total_proj_area=0.00165529)
         s1_min = 0.3 * 0.00165529
@@ -105,35 +116,39 @@ class Problem:
         tip_angle = constraints_check.triangular_tip_angle(vars[8], vars[7], area_2)
         tip_satisfied = constraints_check.min_max_satisfied(tip_angle, 7,disp=False)
         stat = s1_satisfied & tip_satisfied
+        stat = stat * lbconst * ubconst
         return stat
 
 if __name__ == '__main__':
-    df = pd.read_csv('../innout/tim/In/opt_data7_AT.csv', sep=',', index_col='code')
+    df = pd.read_csv('../innout/tim/In/opt_data19_AT_mod.csv', sep=',', index_col='code')
     data = df.values
     X = data[:, 0:11].astype(float)
     y = data[:, 14:16].astype(float)
     cldat = data[:, 13].astype(float)
     area_2 = data[:, 11].astype(float)
+    lim = np.loadtxt('../innout/tim/In/const.csv', delimiter=',')
 
     t = time.time()
-    optim = Problem(X,y,cldat,area_2)
+    optim = Problem(X,y,cldat,area_2,lim)
     optim.createkrig()
-    xupdate, yupdate, metricall = optim.update_sample()
+    xupdate, yupdate, supdate, metricall = optim.update_sample()
     clpred = optim.krigconst.predict(xupdate,['pred'])
     elapsed = time.time() - t
     _,_,_,area_2pred = constraints_check.calc_areas(xupdate[:,6],xupdate[:,4],xupdate[:,3],xupdate[:,7],xupdate[:,9],
                                                     total_proj_area=0.00165529)
     print('Time required:', elapsed)
 
-    cycle = np.array(["opt08_AT"]*5).reshape(-1,1)
-    totalupdate = np.hstack((xupdate,area_2pred.reshape(-1,1),cycle,clpred,yupdate,metricall))
-    np.savetxt("../innout/tim/Out/nextpoints8_AT.csv", totalupdate, delimiter=",",
+    cycle = np.array(["opt20_total_AT"]*5).reshape(-1,1)
+    totalupdate = np.hstack((xupdate,area_2pred.reshape(-1,1),cycle,clpred,yupdate,metricall,supdate))
+    np.savetxt("../innout/tim/Out/nextpoints20_AT.csv", totalupdate, delimiter=",",
                header="x,z,le_sweep_1,dihedral_1,chord_1,tc_1,proj_span_1,chord_2,le_sweep_2,dihedral_2,tc_2,area_2,cycle,"
-                      "CL,CD,dB(A),metric", comments="", fmt="%s")
+                      "CL,CD,dB(A),metric,CDs,dBs", comments="", fmt="%s")
 
     plt.scatter(y[cldat > 0.15, 0], y[cldat > 0.15, 1], c='#1f77b4',label='initial feasible samples')
     plt.scatter(y[cldat <= 0.15, 0], y[cldat <= 0.15, 1],marker='x',c='k',label='initial infeasible samples')
     plt.scatter(yupdate[:, 0], yupdate[:, 1], c='#ff7f0e',label='predicted next samples')
+    plt.errorbar(yupdate[:, 0], yupdate[:, 1], xerr=supdate[:,0], fmt='o', color='orange')
+    plt.errorbar(yupdate[:, 0], yupdate[:, 1], yerr=supdate[:,1], fmt='o', color='orange')
     plt.ylabel('dB(A)')
     plt.xlabel('CD')
     plt.legend()
