@@ -1,5 +1,5 @@
 ## Note
-This repo is no longer active and just for experiments, stable version is available on https://github.com/flowdiagnosticsitb/KADAL
+This repo is no longer active and just for experiments, newer version is available on https://github.com/flowdiagnosticsitb/KADAL
 
 # KADAL
 Kriging for Analysis, Design optimization, And expLoration (KADAL) is a Python program developed by [Flow Diagnostics Research Group](https://flowdiagnostics.ftmd.itb.ac.id "Our Lab's Homepage") from Institut Teknologi Bandung (ITB) that contains collections of Bayesian Optimization tools including various surrogate modeling methods, sampling techniques, and optimization methods.
